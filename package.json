@@ -1,0 +1,9 @@
+{
+  "name": "powers-of-pig",
+  "version": "0.1.0",
+  "description": "A 2048 clone with increasingly absurd pigs",
+  "scripts": {
+    "dev": "npx serve src -l 3000",
+    "start": "npx serve src -l 3000"
+  }
+}

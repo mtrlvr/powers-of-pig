@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Powers of Pig</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- HOME SCREEN -->
+    <div class="screen home-screen active" id="home-screen">
+        <h1 class="home-title">Powers of Pig</h1>
+        <div class="home-pig">🐷</div>
+        <button class="btn btn-primary" id="play-button">Play</button>
+        <button class="btn btn-secondary" id="collection-button">Collection</button>
+        <div class="high-score-display">
+            <span>High Score:</span>
+            <span id="high-score">0</span>
+        </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div class="screen game-screen" id="game-screen">
+        <header class="game-header">
+            <button class="icon-btn" id="home-button" title="Home">🏠</button>
+            <div class="score-container">
+                <div class="score-label">Score</div>
+                <div class="score-value" id="score">0</div>
+            </div>
+            <div class="header-buttons">
+                <button class="icon-btn" id="undo-button" title="Undo">↩️</button>
+                <button class="icon-btn" id="sound-button" title="Sound">🔊</button>
+                <button class="icon-btn" id="pause-button" title="Pause">⏸️</button>
+            </div>
+        </header>
+
+        <div class="board-container">
+            <div class="grid-background" id="grid-background"></div>
+            <div class="tile-container" id="tile-container"></div>
+        </div>
+
+        <p class="instructions">Swipe or use arrow keys to move tiles</p>
+    </div>
+
+    <!-- PAUSE MENU (overlay) -->
+    <div class="overlay" id="pause-overlay">
+        <div class="modal">
+            <h2>Paused</h2>
+            <button class="btn btn-primary" id="resume-button">Resume</button>
+            <button class="btn btn-secondary" id="restart-button">Restart</button>
+            <button class="btn btn-secondary" id="pause-home-button">Home</button>
+        </div>
+    </div>
+
+    <!-- RESTART CONFIRMATION MODAL -->
+    <div class="overlay" id="restart-overlay">
+        <div class="modal">
+            <h2>Start Over?</h2>
+            <p class="modal-text">This will cost 1 life.</p>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="restart-cancel">Cancel</button>
+                <button class="btn btn-danger" id="restart-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div class="screen gameover-screen" id="gameover-screen">
+        <h2>Game Over!</h2>
+        <div class="final-score">
+            <span>Score:</span>
+            <span id="final-score">0</span>
+        </div>
+        <div class="highest-pig">
+            <span>Highest pig:</span>
+            <div class="pig-badge" id="highest-pig-badge"></div>
+        </div>
+        <div class="new-pig-unlocked" id="new-pig-message" style="display: none;">
+            <p>New pig discovered!</p>
+            <div class="pig-badge" id="new-pig-badge"></div>
+        </div>
+        <button class="btn btn-primary" id="play-again-button">Play Again</button>
+        <button class="btn btn-secondary" id="gameover-home-button">Home</button>
+    </div>
+
+    <!-- WIN SCREEN -->
+    <div class="screen win-screen" id="win-screen">
+        <h2>🎉 Congratulations! 🎉</h2>
+        <p class="win-message">You've created</p>
+        <div class="lion-pig-badge">THE LION PIG</div>
+        <p class="win-submessage">🐷🦁</p>
+        <button class="btn btn-primary" id="continue-button">Continue Playing</button>
+        <button class="btn btn-secondary" id="new-game-button">New Game</button>
+    </div>
+
+    <!-- COLLECTION SCREEN (Badge Gallery) -->
+    <div class="screen collection-screen" id="collection-screen">
+        <header class="collection-header">
+            <button class="icon-btn" id="collection-back-button">←</button>
+            <h2>Collection</h2>
+            <div class="collection-progress" id="collection-progress">0/17</div>
+        </header>
+        <div class="badge-grid" id="badge-grid"></div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
