@@ -25,10 +25,27 @@ body {
     padding: 20px;
     flex-direction: column;
     align-items: center;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
 }
 
 .screen.active {
     display: flex;
+    opacity: 1;
+    transform: scale(1);
+    animation: fadeInScale 0.25s ease-out;
+}
+
+@keyframes fadeInScale {
+    0% {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 /* ========== BUTTONS ========== */
@@ -39,12 +56,20 @@ body {
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: transform 0.1s, background 0.2s;
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.2s ease-out,
+                box-shadow 0.2s ease-out;
     min-width: 200px;
 }
 
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
 .btn:active {
-    transform: scale(0.98);
+    transform: scale(0.95) translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .btn-primary {
@@ -200,35 +225,64 @@ body {
 .tile {
     position: absolute;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     font-weight: 700;
     border-radius: 8px;
-    transition: top 0.12s ease-out, left 0.12s ease-out;
-    font-size: 0.85rem;
+    transition: top 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                left 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     text-align: center;
     padding: 4px;
+    overflow: hidden;
+    will-change: transform, top, left;
+}
+
+.tile-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.tile-name {
+    font-size: 0.6rem;
     line-height: 1.1;
     word-wrap: break-word;
+    max-width: 100%;
 }
 
 .tile.new {
-    animation: appear 0.2s ease-out;
+    animation: appear 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .tile.merged {
-    animation: pop 0.2s ease-out;
+    animation: pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 10;
 }
 
 @keyframes appear {
-    0% { opacity: 0; transform: scale(0); }
-    100% { opacity: 1; transform: scale(1); }
+    0% {
+        opacity: 0;
+        transform: scale(0);
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 @keyframes pop {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.15); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 /* Tile text colors */
@@ -243,10 +297,17 @@ body {
     text-shadow: 0 0 10px rgba(255,255,255,0.5), 0 2px 4px rgba(0,0,0,0.3);
 }
 
-/* Font sizes based on pig name length */
-.tile-2, .tile-4, .tile-8, .tile-16, .tile-32 { font-size: 1rem; }
-.tile-64, .tile-128, .tile-512, .tile-1024 { font-size: 0.75rem; }
-.tile-256, .tile-2048, .tile-4096, .tile-8192, .tile-16384, .tile-32768, .tile-65536, .tile-131072 { font-size: 0.65rem; }
+/* Name sizes based on pig name length */
+.tile-256 .tile-name,
+.tile-2048 .tile-name,
+.tile-4096 .tile-name,
+.tile-8192 .tile-name,
+.tile-16384 .tile-name,
+.tile-32768 .tile-name,
+.tile-65536 .tile-name,
+.tile-131072 .tile-name {
+    font-size: 0.5rem;
+}
 
 .instructions {
     color: #776e65;
@@ -261,15 +322,23 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0);
     display: none;
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    transition: background 0.2s ease-out;
 }
 
 .overlay.active {
     display: flex;
+    background: rgba(0,0,0,0.5);
+    animation: overlayFadeIn 0.2s ease-out;
+}
+
+@keyframes overlayFadeIn {
+    0% { background: rgba(0,0,0,0); }
+    100% { background: rgba(0,0,0,0.5); }
 }
 
 .modal {
@@ -282,6 +351,20 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    transform: scale(0.9);
+    opacity: 0;
+    animation: modalSlideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes modalSlideIn {
+    0% {
+        transform: scale(0.9) translateY(-20px);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
 }
 
 .modal h2 {
@@ -584,13 +667,27 @@ body {
     }
 
     .tile {
-        font-size: 0.7rem;
         padding: 2px;
     }
 
-    .tile-2, .tile-4, .tile-8, .tile-16, .tile-32 { font-size: 0.85rem; }
-    .tile-64, .tile-128, .tile-512, .tile-1024 { font-size: 0.65rem; }
-    .tile-256, .tile-2048, .tile-4096, .tile-8192, .tile-16384, .tile-32768, .tile-65536, .tile-131072 { font-size: 0.55rem; }
+    .tile-icon {
+        font-size: 1.2rem;
+    }
+
+    .tile-name {
+        font-size: 0.5rem;
+    }
+
+    .tile-256 .tile-name,
+    .tile-2048 .tile-name,
+    .tile-4096 .tile-name,
+    .tile-8192 .tile-name,
+    .tile-16384 .tile-name,
+    .tile-32768 .tile-name,
+    .tile-65536 .tile-name,
+    .tile-131072 .tile-name {
+        font-size: 0.4rem;
+    }
 
     .icon-btn {
         font-size: 1.2rem;

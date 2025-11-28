@@ -3,23 +3,23 @@
 
 // The 17 Pigs - mapping value to pig data
 const PIGS = {
-    2:      { tier: 1,  name: 'Pip',              color: '#FFE4E1' },
-    4:      { tier: 2,  name: 'Sprout',           color: '#FFCCCB' },
-    8:      { tier: 3,  name: 'Trotter',          color: '#FFB6B0' },
-    16:     { tier: 4,  name: 'Hamlet',           color: '#FFA07A' },
-    32:     { tier: 5,  name: 'Hog',              color: '#FF8C69' },
-    64:     { tier: 6,  name: 'Sir Oinks',        color: '#FF7F50' },
-    128:    { tier: 7,  name: 'Wiggleton',        color: '#FF6347' },
-    256:    { tier: 8,  name: 'Baron von Bubble', color: '#FF4500' },
-    512:    { tier: 9,  name: 'Sherlock Hams',    color: '#DC143C' },
-    1024:   { tier: 10, name: 'Sir Loin',         color: '#C71585' },
-    2048:   { tier: 11, name: 'Lord Porkington',  color: '#9932CC' },
-    4096:   { tier: 12, name: 'Neil Hamstrong',   color: '#4169E1' },
-    8192:   { tier: 13, name: 'Erik the Pink',    color: '#228B22' },
-    16384:  { tier: 14, name: 'Gandalf the Ham',  color: '#6B8E23' },
-    32768:  { tier: 15, name: 'His Royal Hogness', color: '#DAA520' },
-    65536:  { tier: 16, name: 'The Cosmic Sow',   color: '#4B0082' },
-    131072: { tier: 17, name: 'THE LION PIG',     color: null }
+    2:      { tier: 1,  name: 'Pip',              color: '#FFE4E1', icon: '🐷' },
+    4:      { tier: 2,  name: 'Sprout',           color: '#FFCCCB', icon: '🐷🌱' },
+    8:      { tier: 3,  name: 'Trotter',          color: '#FFB6B0', icon: '🐷🦶' },
+    16:     { tier: 4,  name: 'Hamlet',           color: '#FFA07A', icon: '🐷🎭' },
+    32:     { tier: 5,  name: 'Hog',              color: '#FF8C69', icon: '🐗' },
+    64:     { tier: 6,  name: 'Sir Oinks',        color: '#FF7F50', icon: '🐷⚔️' },
+    128:    { tier: 7,  name: 'Wiggleton',        color: '#FF6347', icon: '🐷💃' },
+    256:    { tier: 8,  name: 'Baron von Bubble', color: '#FF4500', icon: '🐷🎩' },
+    512:    { tier: 9,  name: 'Sherlock Hams',    color: '#DC143C', icon: '🐷🔍' },
+    1024:   { tier: 10, name: 'Sir Loin',         color: '#C71585', icon: '🐷🥩' },
+    2048:   { tier: 11, name: 'Lord Porkington',  color: '#9932CC', icon: '🐷👑' },
+    4096:   { tier: 12, name: 'Neil Hamstrong',   color: '#4169E1', icon: '🐷🚀' },
+    8192:   { tier: 13, name: 'Erik the Pink',    color: '#228B22', icon: '🐷⛵' },
+    16384:  { tier: 14, name: 'Gandalf the Ham',  color: '#6B8E23', icon: '🐷🧙' },
+    32768:  { tier: 15, name: 'His Royal Hogness', color: '#DAA520', icon: '🐷👸' },
+    65536:  { tier: 16, name: 'The Cosmic Sow',   color: '#4B0082', icon: '🐷✨' },
+    131072: { tier: 17, name: 'THE LION PIG',     color: null, icon: '🦁🐷' }
 };
 
 // Get all pig values in order
@@ -33,6 +33,283 @@ function getPig(value) {
 // Lives system constants
 const MAX_LIVES = 3;
 const LIFE_REGEN_TIME = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+
+// Local storage key
+const STORAGE_KEY = 'powersOfPig';
+
+// ========== SOUND SYSTEM (Web Audio API) ==========
+class SoundSystem {
+    constructor() {
+        this.audioContext = null;
+        this.enabled = true;
+    }
+
+    // Initialize audio context (must be called after user interaction)
+    init() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        // Resume if suspended (browsers require user gesture)
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+    }
+
+    // Generate an oink sound for a specific pig tier (1-17)
+    // Each tier has a unique pitch, duration, and character
+    playOink(tier) {
+        if (!this.enabled || !this.audioContext) return;
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        // Base frequency increases with tier (higher pigs = higher pitch)
+        // Tier 1 (Pip) = 200Hz, Tier 17 (Lion Pig) = 800Hz
+        const baseFreq = 150 + (tier * 40);
+
+        // Duration gets slightly longer for higher tiers
+        const duration = 0.15 + (tier * 0.01);
+
+        // Create oscillator for the main oink tone
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+
+        // Use different waveforms for variety
+        // Lower tiers: sine (soft), mid tiers: triangle, high tiers: sawtooth (rich)
+        if (tier <= 5) {
+            osc.type = 'sine';
+        } else if (tier <= 11) {
+            osc.type = 'triangle';
+        } else {
+            osc.type = 'sawtooth';
+        }
+
+        // Frequency envelope - quick pitch drop gives "oink" character
+        osc.frequency.setValueAtTime(baseFreq * 1.3, now);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.7, now + duration * 0.3);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + duration);
+
+        // Volume envelope - quick attack, medium decay
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.3, now + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+        // Connect and play
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + duration + 0.05);
+
+        // For higher tiers (8+), add a harmonic for richness
+        if (tier >= 8) {
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(baseFreq * 2, now);
+            osc2.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + duration);
+
+            gain2.gain.setValueAtTime(0, now);
+            gain2.gain.linearRampToValueAtTime(0.1, now + 0.02);
+            gain2.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+
+            osc2.start(now);
+            osc2.stop(now + duration + 0.05);
+        }
+
+        // For THE LION PIG (tier 17), add a special triumphant sound
+        if (tier === 17) {
+            this.playLionPigFanfare();
+        }
+    }
+
+    // Special fanfare for reaching THE LION PIG
+    playLionPigFanfare() {
+        if (!this.audioContext) return;
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        // Play a triumphant arpeggio
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+
+        notes.forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + i * 0.1);
+
+            gain.gain.setValueAtTime(0, now + i * 0.1);
+            gain.gain.linearRampToValueAtTime(0.2, now + i * 0.1 + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.3);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(now + i * 0.1);
+            osc.stop(now + i * 0.1 + 0.35);
+        });
+    }
+
+    // Play a soft pop sound for spawning new tiles
+    playSpawn() {
+        if (!this.enabled || !this.audioContext) return;
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.1);
+    }
+
+    // Play a slide/swoosh sound for tile movement
+    playSlide() {
+        if (!this.enabled || !this.audioContext) return;
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        // White noise burst for swoosh effect
+        const bufferSize = ctx.sampleRate * 0.05;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+        }
+
+        const noise = ctx.createBufferSource();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        noise.buffer = buffer;
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(2000, now);
+
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        noise.start(now);
+    }
+
+    setEnabled(enabled) {
+        this.enabled = enabled;
+    }
+}
+
+// Global sound system instance
+const soundSystem = new SoundSystem();
+
+// ========== HAPTICS SYSTEM (Vibration API) ==========
+class HapticsSystem {
+    constructor() {
+        this.enabled = true;
+        this.supported = 'vibrate' in navigator;
+    }
+
+    // Vibrate with a pattern for a specific pig tier (1-17)
+    // Higher tiers get stronger, more complex vibration patterns
+    vibrateForTier(tier) {
+        if (!this.enabled || !this.supported) return;
+
+        // Pattern intensity and complexity increases with tier
+        // Format: [vibrate, pause, vibrate, pause, ...]
+        let pattern;
+
+        if (tier <= 3) {
+            // Tiers 1-3: Single short buzz (10-30ms)
+            pattern = [10 + tier * 7];
+        } else if (tier <= 6) {
+            // Tiers 4-6: Double tap
+            const duration = 15 + (tier - 3) * 10;
+            pattern = [duration, 30, duration];
+        } else if (tier <= 10) {
+            // Tiers 7-10: Triple pulse with increasing intensity
+            const duration = 20 + (tier - 6) * 8;
+            pattern = [duration, 25, duration, 25, duration];
+        } else if (tier <= 14) {
+            // Tiers 11-14: Rolling vibration
+            const duration = 25 + (tier - 10) * 10;
+            pattern = [duration, 20, duration * 0.7, 20, duration * 1.3];
+        } else if (tier <= 16) {
+            // Tiers 15-16: Strong pulsing pattern
+            const duration = 40 + (tier - 14) * 15;
+            pattern = [duration, 30, duration, 30, duration, 30, duration];
+        } else {
+            // Tier 17 (THE LION PIG): Epic celebration pattern!
+            pattern = [50, 30, 50, 30, 100, 50, 100, 50, 150];
+        }
+
+        try {
+            navigator.vibrate(pattern);
+        } catch (e) {
+            // Vibration might fail on some devices - fail silently
+        }
+    }
+
+    // Light tap for spawning new tiles
+    vibrateSpawn() {
+        if (!this.enabled || !this.supported) return;
+
+        try {
+            navigator.vibrate(8);
+        } catch (e) {
+            // Fail silently
+        }
+    }
+
+    // Quick feedback for button presses
+    vibrateButton() {
+        if (!this.enabled || !this.supported) return;
+
+        try {
+            navigator.vibrate(5);
+        } catch (e) {
+            // Fail silently
+        }
+    }
+
+    // Sad vibration for game over
+    vibrateGameOver() {
+        if (!this.enabled || !this.supported) return;
+
+        try {
+            // Descending pattern feels "deflating"
+            navigator.vibrate([100, 100, 80, 100, 60, 100, 40]);
+        } catch (e) {
+            // Fail silently
+        }
+    }
+
+    setEnabled(enabled) {
+        this.enabled = enabled;
+    }
+}
+
+// Global haptics system instance
+const hapticsSystem = new HapticsSystem();
 
 class Game {
     constructor() {
@@ -64,6 +341,9 @@ class Game {
         // Cache DOM elements
         this.cacheElements();
 
+        // Load saved data from local storage
+        this.loadGame();
+
         // Set up event listeners
         this.setupEventListeners();
 
@@ -76,6 +356,7 @@ class Game {
         // Update displays
         this.updateHighScoreDisplay();
         this.updateLivesDisplay();
+        this.updateSoundButton();
     }
 
     // Cache all DOM elements
@@ -168,19 +449,48 @@ class Game {
 
     // Calculate tile size and gap based on container
     calculateDimensions() {
-        const container = document.querySelector('.board-container');
-        if (!container) return;
+        const gridBackground = document.querySelector('.grid-background');
+        const tileContainer = document.querySelector('.tile-container');
+        const firstCell = document.querySelector('.cell');
 
-        const containerStyle = getComputedStyle(container);
-        const padding = parseFloat(containerStyle.padding) || 12;
-        const containerSize = container.clientWidth - (padding * 2);
+        if (!gridBackground || !tileContainer || !firstCell) return;
 
+        // Get the grid's computed dimensions (this is the area for cells)
+        const gridWidth = gridBackground.clientWidth;
+        const gridHeight = gridBackground.clientHeight;
+
+        // Get gap from CSS (8px on mobile, 12px on desktop)
         this.gap = window.innerWidth <= 520 ? 8 : 12;
-        this.tileSize = (containerSize - (this.gap * 3)) / 4;
+
+        // CSS grid with 4 columns of 1fr and 3 gaps:
+        // gridWidth = 4 * tileSize + 3 * gap
+        // tileSize = (gridWidth - 3 * gap) / 4
+        this.tileSize = (gridWidth - (this.gap * 3)) / 4;
+
+        // For height, same calculation
+        const tileSizeFromHeight = (gridHeight - (this.gap * 3)) / 4;
+
+        // Use the smaller of the two to ensure tiles fit
+        // (should be equal for aspect-ratio: 1, but just in case)
+        this.tileSize = Math.min(this.tileSize, tileSizeFromHeight);
+
+        // Calculate the actual Y offset between where we think tiles should go
+        // and where the CSS grid actually places cells
+        const tileContainerRect = tileContainer.getBoundingClientRect();
+        const firstCellRect = firstCell.getBoundingClientRect();
+
+        // The offset is where the first cell actually is, relative to tile-container
+        this.yOffset = firstCellRect.top - tileContainerRect.top;
+        this.xOffset = firstCellRect.left - tileContainerRect.left;
     }
 
     // Start a new game
     startGame() {
+        // Initialize sound on first user interaction
+        soundSystem.init();
+        soundSystem.setEnabled(this.soundEnabled);
+        hapticsSystem.setEnabled(this.soundEnabled);
+
         this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
         this.score = 0;
         this.gameOver = false;
@@ -259,6 +569,10 @@ class Game {
         // Track unlocked pigs
         this.unlockPig(value);
 
+        // Play spawn sound and light haptic
+        soundSystem.playSpawn();
+        hapticsSystem.vibrateSpawn();
+
         return true;
     }
 
@@ -266,6 +580,7 @@ class Game {
     unlockPig(value) {
         if (PIGS[value] && !this.unlockedPigs.has(value)) {
             this.unlockedPigs.add(value);
+            this.saveGame();
             return true; // New unlock
         }
         return false;
@@ -319,8 +634,11 @@ class Game {
         if (tile.isNew) element.classList.add('new');
         if (tile.merged) element.classList.add('merged');
 
-        const left = tile.col * (this.tileSize + this.gap);
-        const top = tile.row * (this.tileSize + this.gap);
+        // Calculate position with offset correction for exact cell alignment
+        const xOffset = this.xOffset || 0;
+        const yOffset = this.yOffset || 0;
+        const left = xOffset + tile.col * (this.tileSize + this.gap);
+        const top = yOffset + tile.row * (this.tileSize + this.gap);
 
         element.style.width = `${this.tileSize}px`;
         element.style.height = `${this.tileSize}px`;
@@ -331,7 +649,17 @@ class Game {
             element.style.backgroundColor = pig.color;
         }
 
-        element.textContent = pig.name;
+        // Create icon and name elements
+        const iconEl = document.createElement('div');
+        iconEl.className = 'tile-icon';
+        iconEl.textContent = pig.icon || '🐷';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'tile-name';
+        nameEl.textContent = pig.name;
+
+        element.appendChild(iconEl);
+        element.appendChild(nameEl);
         this.tileContainer.appendChild(element);
     }
 
@@ -457,6 +785,11 @@ class Game {
                 this.score += newValue;
                 this.updateScore();
 
+                // Play oink sound and haptic feedback for the new pig tier
+                const pig = getPig(newValue);
+                soundSystem.playOink(pig.tier);
+                hapticsSystem.vibrateForTier(pig.tier);
+
                 // Unlock new pig
                 this.unlockPig(newValue);
             } else {
@@ -524,6 +857,7 @@ class Game {
         if (this.score > this.highScore) {
             this.highScore = this.score;
             this.updateHighScoreDisplay();
+            this.saveGame();
         }
     }
 
@@ -535,6 +869,9 @@ class Game {
     showGameOverScreen() {
         // Lose a life on game over
         this.loseLife();
+
+        // Sad haptic feedback
+        hapticsSystem.vibrateGameOver();
 
         this.finalScoreElement.textContent = this.score;
 
@@ -584,7 +921,7 @@ class Game {
             }
 
             badge.innerHTML = `
-                <div class="badge-icon">${isUnlocked ? '🐷' : '?'}</div>
+                <div class="badge-icon">${isUnlocked ? (pig.icon || '🐷') : '?'}</div>
                 <div class="badge-name">${isUnlocked ? pig.name : '???'}</div>
             `;
 
@@ -597,7 +934,73 @@ class Game {
     // Toggle sound
     toggleSound() {
         this.soundEnabled = !this.soundEnabled;
+        soundSystem.setEnabled(this.soundEnabled);
+        hapticsSystem.setEnabled(this.soundEnabled);
+        this.updateSoundButton();
+        this.saveGame();
+    }
+
+    // Update sound button display
+    updateSoundButton() {
         this.soundButton.textContent = this.soundEnabled ? '🔊' : '🔇';
+    }
+
+    // ========== PERSISTENCE (LOCAL STORAGE) ==========
+
+    // Save game data to local storage
+    saveGame() {
+        const data = {
+            highScore: this.highScore,
+            lives: this.lives,
+            lastLifeLostTime: this.lastLifeLostTime,
+            unlockedPigs: Array.from(this.unlockedPigs),
+            soundEnabled: this.soundEnabled
+        };
+
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+            // Storage might be full or disabled - fail silently
+            console.warn('Could not save game:', e);
+        }
+    }
+
+    // Load game data from local storage
+    loadGame() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const data = JSON.parse(saved);
+
+                // Restore high score
+                if (typeof data.highScore === 'number') {
+                    this.highScore = data.highScore;
+                }
+
+                // Restore lives
+                if (typeof data.lives === 'number') {
+                    this.lives = Math.min(MAX_LIVES, Math.max(0, data.lives));
+                }
+
+                // Restore life regen timestamp
+                if (data.lastLifeLostTime) {
+                    this.lastLifeLostTime = data.lastLifeLostTime;
+                }
+
+                // Restore unlocked pigs
+                if (Array.isArray(data.unlockedPigs)) {
+                    this.unlockedPigs = new Set(data.unlockedPigs);
+                }
+
+                // Restore sound preference
+                if (typeof data.soundEnabled === 'boolean') {
+                    this.soundEnabled = data.soundEnabled;
+                }
+            }
+        } catch (e) {
+            // Invalid data or storage disabled - start fresh
+            console.warn('Could not load game:', e);
+        }
     }
 
     // ========== LIVES SYSTEM ==========
@@ -623,6 +1026,7 @@ class Game {
                 this.lastLifeLostTime = Date.now();
             }
             this.updateLivesDisplay();
+            this.saveGame();
         }
     }
 
@@ -634,6 +1038,7 @@ class Game {
             this.lastLifeLostTime = null;
         }
         this.updateLivesDisplay();
+        this.saveGame();
     }
 
     // Check if life should regenerate
