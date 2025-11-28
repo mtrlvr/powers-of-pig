@@ -16,27 +16,43 @@ npm run dev    # Start local dev server on port 3000
 
 ```
 src/
-  index.html   # Main HTML with game container
-  styles.css   # All styling (responsive, tile colors, animations)
-  game.js      # Core game engine (Game class)
+  index.html         # Main HTML with all screens (home, game, pause, collection, etc.)
+  styles.css         # All styling (responsive, tile colors, animations)
+  game.js            # Core game engine (Game class, state management, rendering)
+  assets/
+    pigs/            # 17 pig images (1.pip.png through 17.thelionpig.png)
 ```
 
 ## Architecture
 
 - **Single-page app** with vanilla HTML/CSS/JavaScript (no frameworks)
-- **Game class** in game.js handles all game state and logic
-- **Grid-based rendering** - tiles positioned absolutely within container
-- **Touch + keyboard input** - swipe detection and arrow keys
+- **Game class** in game.js handles all game state, logic, and rendering
+- **Grid-based rendering** - CSS Grid for background cells, absolute positioning for animated tiles
+- **Touch + keyboard input** - swipe detection (with threshold) and arrow keys
+- **Lives system** - 3 lives max, 4-hour regeneration timer, persisted to localStorage
+- **Sound system** - Web Audio API with 17 unique oink sounds (different pitches per tier)
+- **Haptics** - Vibration API patterns synced with sounds on supported devices
+- **Persistence** - localStorage for game state, unlocked badges, lives, high score
 
-## Build Phases
+## Key Implementation Details
 
-The game is being built incrementally. See the PRD in the initial prompt for full details. Current phases:
-1. Core Game Engine (complete)
-2. Pig Identity - replace numbers with pig names/colors
-3. Screens & Navigation - home, pause, game over, win, collection
-4. Lives System - 3 lives, 4-hour regen
-5. Persistence - local storage for game state, badges, lives
-6. Animations - smooth sliding, merge pop, spawn
-7. Sound - 17 unique oink sounds per tier
-8. Haptics - vibration patterns synced with sounds
-9. Visual Polish - pig images, isometric board
+### Tile Positioning
+Tiles use `getBoundingClientRect()` to measure actual cell positions at runtime, storing `xOffset`/`yOffset` to ensure perfect alignment with grid cells across different screen sizes.
+
+### PIGS Constant
+Each tier defined with: `{ tier, name, color, icon, image }` - image paths point to `assets/pigs/` folder.
+
+### Screens
+- Home, Game, Pause (overlay), Game Over, Win, Collection (badge gallery), Out of Lives
+
+## Build Phases (All Complete)
+
+1. **Core Game Engine** - 4x4 grid, tile spawning, merge logic, win/lose detection
+2. **Pig Identity** - 17 pig tiers with names, colors, icons replacing numbers
+3. **Screens & Navigation** - All game screens with transitions
+4. **Lives System** - 3 lives, 4-hour regen timer, purchase placeholders
+5. **Persistence** - localStorage for state, badges, lives, high score
+6. **Animations** - Smooth sliding, merge pop, spawn effects via CSS
+7. **Sound** - 17 unique oink sounds using Web Audio API oscillators
+8. **Haptics** - Vibration patterns on move, merge, win, game over
+9. **Visual Polish** - Custom pig images, tile alignment fixes, responsive design
