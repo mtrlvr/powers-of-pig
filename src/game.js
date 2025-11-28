@@ -30,6 +30,10 @@ function getPig(value) {
     return PIGS[value] || { tier: 0, name: '?', color: '#ccc' };
 }
 
+// Lives system constants
+const MAX_LIVES = 3;
+const LIFE_REGEN_TIME = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+
 class Game {
     constructor() {
         // Game state
@@ -42,6 +46,11 @@ class Game {
         this.keepPlaying = false;
         this.soundEnabled = true;
         this.previousState = null; // For undo
+
+        // Lives system
+        this.lives = MAX_LIVES;
+        this.lastLifeLostTime = null; // Timestamp when a life was last lost (for regen)
+        this.lifeRegenInterval = null;
 
         // Unlocked pigs (badges)
         this.unlockedPigs = new Set();
@@ -58,11 +67,15 @@ class Game {
         // Set up event listeners
         this.setupEventListeners();
 
+        // Check for life regeneration
+        this.checkLifeRegen();
+
         // Show home screen
         this.showScreen('home');
 
-        // Update high score display
+        // Update displays
         this.updateHighScoreDisplay();
+        this.updateLivesDisplay();
     }
 
     // Cache all DOM elements
@@ -73,7 +86,8 @@ class Game {
             game: document.getElementById('game-screen'),
             gameover: document.getElementById('gameover-screen'),
             win: document.getElementById('win-screen'),
-            collection: document.getElementById('collection-screen')
+            collection: document.getElementById('collection-screen'),
+            nolives: document.getElementById('nolives-screen')
         };
 
         // Overlays
@@ -94,6 +108,12 @@ class Game {
         this.badgeGrid = document.getElementById('badge-grid');
         this.collectionProgress = document.getElementById('collection-progress');
         this.soundButton = document.getElementById('sound-button');
+
+        // Lives elements
+        this.homeLivesDisplay = document.getElementById('home-lives');
+        this.nextLifeCountdown = document.getElementById('next-life-countdown');
+        this.buyOneLifeBtn = document.getElementById('buy-one-life');
+        this.buyThreeLivesBtn = document.getElementById('buy-three-lives');
     }
 
     // Show a specific screen
@@ -509,6 +529,9 @@ class Game {
 
     // Show game over screen
     showGameOverScreen() {
+        // Lose a life on game over
+        this.loseLife();
+
         this.finalScoreElement.textContent = this.score;
 
         const highestValue = this.getHighestPig();
@@ -573,11 +596,151 @@ class Game {
         this.soundButton.textContent = this.soundEnabled ? '🔊' : '🔇';
     }
 
+    // ========== LIVES SYSTEM ==========
+
+    // Update the lives display on home screen
+    updateLivesDisplay() {
+        const icons = this.homeLivesDisplay.querySelectorAll('.life-icon');
+        icons.forEach((icon, index) => {
+            if (index < this.lives) {
+                icon.classList.remove('empty');
+            } else {
+                icon.classList.add('empty');
+            }
+        });
+    }
+
+    // Lose a life
+    loseLife() {
+        if (this.lives > 0) {
+            this.lives--;
+            // Start regen timer if we just lost a life and aren't at max
+            if (this.lives < MAX_LIVES && !this.lastLifeLostTime) {
+                this.lastLifeLostTime = Date.now();
+            }
+            this.updateLivesDisplay();
+        }
+    }
+
+    // Add a life (from purchase or regen)
+    addLife(count = 1) {
+        this.lives = Math.min(MAX_LIVES, this.lives + count);
+        // If at max lives, clear the regen timer
+        if (this.lives >= MAX_LIVES) {
+            this.lastLifeLostTime = null;
+        }
+        this.updateLivesDisplay();
+    }
+
+    // Check if life should regenerate
+    checkLifeRegen() {
+        if (this.lives >= MAX_LIVES) {
+            this.lastLifeLostTime = null;
+            return;
+        }
+
+        if (this.lastLifeLostTime) {
+            const elapsed = Date.now() - this.lastLifeLostTime;
+            if (elapsed >= LIFE_REGEN_TIME) {
+                // Regenerate a life
+                this.addLife(1);
+                // Reset timer for next regen if still not at max
+                if (this.lives < MAX_LIVES) {
+                    this.lastLifeLostTime = Date.now();
+                }
+            }
+        }
+    }
+
+    // Start the countdown timer display
+    startCountdownTimer() {
+        // Clear any existing interval
+        if (this.lifeRegenInterval) {
+            clearInterval(this.lifeRegenInterval);
+        }
+
+        this.updateCountdownDisplay();
+
+        this.lifeRegenInterval = setInterval(() => {
+            this.checkLifeRegen();
+            this.updateCountdownDisplay();
+
+            // If we've regained a life and are on nolives screen, go home
+            if (this.lives > 0 && this.currentScreen === 'nolives') {
+                this.showScreen('home');
+            }
+        }, 1000);
+    }
+
+    // Stop the countdown timer
+    stopCountdownTimer() {
+        if (this.lifeRegenInterval) {
+            clearInterval(this.lifeRegenInterval);
+            this.lifeRegenInterval = null;
+        }
+    }
+
+    // Update the countdown display
+    updateCountdownDisplay() {
+        if (this.lives >= MAX_LIVES || !this.lastLifeLostTime) {
+            this.nextLifeCountdown.textContent = '--:--:--';
+            return;
+        }
+
+        const elapsed = Date.now() - this.lastLifeLostTime;
+        const remaining = Math.max(0, LIFE_REGEN_TIME - elapsed);
+
+        const hours = Math.floor(remaining / (1000 * 60 * 60));
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+        this.nextLifeCountdown.textContent =
+            `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // Update purchase button visibility
+    updatePurchaseButtons() {
+        // Show "buy 1 life" if player has < 3 lives
+        this.buyOneLifeBtn.style.display = this.lives < MAX_LIVES ? 'flex' : 'none';
+        // Show "buy 3 lives" only if player has 0 lives
+        this.buyThreeLivesBtn.style.display = this.lives === 0 ? 'flex' : 'none';
+    }
+
+    // Handle purchasing lives (placeholder - simulates purchase)
+    purchaseLives(count) {
+        // In a real app, this would trigger payment flow
+        // For now, just add the lives
+        alert(`[Placeholder] You would purchase ${count} life/lives here!`);
+        this.addLife(count);
+
+        // If we now have lives, go to home screen
+        if (this.lives > 0) {
+            this.showScreen('home');
+        } else {
+            this.updatePurchaseButtons();
+        }
+    }
+
+    // Show out of lives screen
+    showNoLivesScreen() {
+        // Start regeneration timer if not already running
+        if (!this.lastLifeLostTime) {
+            this.lastLifeLostTime = Date.now();
+        }
+        this.updatePurchaseButtons();
+        this.startCountdownTimer();
+        this.showScreen('nolives');
+    }
+
     // Set up all event listeners
     setupEventListeners() {
         // Home screen buttons
         document.getElementById('play-button').addEventListener('click', () => {
-            this.startGame();
+            if (this.lives > 0) {
+                this.startGame();
+            } else {
+                this.showNoLivesScreen();
+            }
         });
 
         document.getElementById('collection-button').addEventListener('click', () => {
@@ -623,15 +786,39 @@ class Game {
 
         document.getElementById('restart-confirm').addEventListener('click', () => {
             this.hideOverlay('restart');
-            this.startGame();
+            // Restart costs a life
+            this.loseLife();
+            if (this.lives > 0) {
+                this.startGame();
+            } else {
+                this.showNoLivesScreen();
+            }
         });
 
         // Game over screen buttons
         document.getElementById('play-again-button').addEventListener('click', () => {
-            this.startGame();
+            if (this.lives > 0) {
+                this.startGame();
+            } else {
+                this.showNoLivesScreen();
+            }
         });
 
         document.getElementById('gameover-home-button').addEventListener('click', () => {
+            this.showScreen('home');
+        });
+
+        // No lives screen buttons
+        document.getElementById('buy-one-life').addEventListener('click', () => {
+            this.purchaseLives(1);
+        });
+
+        document.getElementById('buy-three-lives').addEventListener('click', () => {
+            this.purchaseLives(3);
+        });
+
+        document.getElementById('nolives-home-button').addEventListener('click', () => {
+            this.stopCountdownTimer();
             this.showScreen('home');
         });
 

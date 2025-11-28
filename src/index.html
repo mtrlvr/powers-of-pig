@@ -12,6 +12,11 @@
     <!-- HOME SCREEN -->
     <div class="screen home-screen active" id="home-screen">
         <h1 class="home-title">Powers of Pig</h1>
+        <div class="lives-display" id="home-lives">
+            <span class="life-icon">🐷</span>
+            <span class="life-icon">🐷</span>
+            <span class="life-icon">🐷</span>
+        </div>
         <div class="home-pig">🐷</div>
         <button class="btn btn-primary" id="play-button">Play</button>
         <button class="btn btn-secondary" id="collection-button">Collection</button>
@@ -103,6 +108,27 @@
             <div class="collection-progress" id="collection-progress">0/17</div>
         </header>
         <div class="badge-grid" id="badge-grid"></div>
+    </div>
+
+    <!-- OUT OF LIVES SCREEN -->
+    <div class="screen nolives-screen" id="nolives-screen">
+        <h2>Out of Oinks!</h2>
+        <div class="nolives-pig">😢🐷</div>
+        <div class="next-life-timer">
+            <span>Next life in:</span>
+            <span id="next-life-countdown">4:00:00</span>
+        </div>
+        <div class="purchase-options">
+            <button class="btn btn-purchase" id="buy-one-life">
+                <span class="purchase-label">Get 1 Life</span>
+                <span class="purchase-price">£0.50</span>
+            </button>
+            <button class="btn btn-purchase" id="buy-three-lives" style="display: none;">
+                <span class="purchase-label">Get 3 Lives</span>
+                <span class="purchase-price">£1.00</span>
+            </button>
+        </div>
+        <button class="btn btn-secondary" id="nolives-home-button">Home</button>
     </div>
 
     <script src="game.js"></script>

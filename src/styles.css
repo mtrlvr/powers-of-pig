@@ -391,6 +391,92 @@ body {
     font-size: 3rem;
 }
 
+/* ========== LIVES DISPLAY ========== */
+.lives-display {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.life-icon {
+    font-size: 1.5rem;
+    transition: opacity 0.3s;
+}
+
+.life-icon.empty {
+    opacity: 0.3;
+    filter: grayscale(1);
+}
+
+/* ========== OUT OF LIVES SCREEN ========== */
+.nolives-screen {
+    gap: 20px;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.nolives-screen h2 {
+    font-size: 2rem;
+    color: #776e65;
+}
+
+.nolives-pig {
+    font-size: 4rem;
+}
+
+.next-life-timer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    color: #776e65;
+    font-size: 1rem;
+}
+
+#next-life-countdown {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f2b179;
+}
+
+.purchase-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 250px;
+}
+
+.btn-purchase {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.btn-purchase:hover {
+    background: #2ecc71;
+}
+
+.purchase-label {
+    text-align: left;
+}
+
+.purchase-price {
+    background: rgba(255,255,255,0.2);
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
 /* ========== COLLECTION SCREEN ========== */
 .collection-screen {
     gap: 20px;
