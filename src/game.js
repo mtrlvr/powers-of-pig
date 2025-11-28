@@ -3,23 +3,23 @@
 
 // The 17 Pigs - mapping value to pig data
 const PIGS = {
-    2:      { tier: 1,  name: 'Pip',              color: '#FFE4E1', icon: '🐷' },
-    4:      { tier: 2,  name: 'Sprout',           color: '#FFCCCB', icon: '🐷🌱' },
-    8:      { tier: 3,  name: 'Trotter',          color: '#FFB6B0', icon: '🐷🦶' },
-    16:     { tier: 4,  name: 'Hamlet',           color: '#FFA07A', icon: '🐷🎭' },
-    32:     { tier: 5,  name: 'Hog',              color: '#FF8C69', icon: '🐗' },
-    64:     { tier: 6,  name: 'Sir Oinks',        color: '#FF7F50', icon: '🐷⚔️' },
-    128:    { tier: 7,  name: 'Wiggleton',        color: '#FF6347', icon: '🐷💃' },
-    256:    { tier: 8,  name: 'Baron von Bubble', color: '#FF4500', icon: '🐷🎩' },
-    512:    { tier: 9,  name: 'Sherlock Hams',    color: '#DC143C', icon: '🐷🔍' },
-    1024:   { tier: 10, name: 'Sir Loin',         color: '#C71585', icon: '🐷🥩' },
-    2048:   { tier: 11, name: 'Lord Porkington',  color: '#9932CC', icon: '🐷👑' },
-    4096:   { tier: 12, name: 'Neil Hamstrong',   color: '#4169E1', icon: '🐷🚀' },
-    8192:   { tier: 13, name: 'Erik the Pink',    color: '#228B22', icon: '🐷⛵' },
-    16384:  { tier: 14, name: 'Gandalf the Ham',  color: '#6B8E23', icon: '🐷🧙' },
-    32768:  { tier: 15, name: 'His Royal Hogness', color: '#DAA520', icon: '🐷👸' },
-    65536:  { tier: 16, name: 'The Cosmic Sow',   color: '#4B0082', icon: '🐷✨' },
-    131072: { tier: 17, name: 'THE LION PIG',     color: null, icon: '🦁🐷' }
+    2:      { tier: 1,  name: 'Pip',              color: '#FFE4E1', icon: '🐷', image: 'assets/pigs/1.pip.png' },
+    4:      { tier: 2,  name: 'Sprout',           color: '#FFCCCB', icon: '🐷🌱', image: 'assets/pigs/2.sprout.png' },
+    8:      { tier: 3,  name: 'Trotter',          color: '#FFB6B0', icon: '🐷🦶', image: 'assets/pigs/3.trotter.png' },
+    16:     { tier: 4,  name: 'Hamlet',           color: '#FFA07A', icon: '🐷🎭', image: 'assets/pigs/4.hamlet.png' },
+    32:     { tier: 5,  name: 'Hog',              color: '#FF8C69', icon: '🐗', image: 'assets/pigs/5.hog.png' },
+    64:     { tier: 6,  name: 'Sir Oinks',        color: '#FF7F50', icon: '🐷⚔️', image: 'assets/pigs/6.siroinks.png' },
+    128:    { tier: 7,  name: 'Wiggleton',        color: '#FF6347', icon: '🐷💃', image: 'assets/pigs/7.wiggleton.png' },
+    256:    { tier: 8,  name: 'Baron von Bubble', color: '#FF4500', icon: '🐷🎩', image: 'assets/pigs/8.baronvonbubble.png' },
+    512:    { tier: 9,  name: 'Sherlock Hams',    color: '#DC143C', icon: '🐷🔍', image: 'assets/pigs/9.sherlockhams.png' },
+    1024:   { tier: 10, name: 'Sir Loin',         color: '#C71585', icon: '🐷🥩', image: 'assets/pigs/10.sirloin.png' },
+    2048:   { tier: 11, name: 'Lord Porkington',  color: '#9932CC', icon: '🐷👑', image: 'assets/pigs/11.lordporkington.png' },
+    4096:   { tier: 12, name: 'Neil Hamstrong',   color: '#4169E1', icon: '🐷🚀', image: 'assets/pigs/12.neilhamstrong.png' },
+    8192:   { tier: 13, name: 'Erik the Pink',    color: '#228B22', icon: '🐷⛵', image: 'assets/pigs/13.erikthepink.png' },
+    16384:  { tier: 14, name: 'Gandalf the Ham',  color: '#6B8E23', icon: '🐷🧙', image: 'assets/pigs/14.gandalftheham.png' },
+    32768:  { tier: 15, name: 'His Royal Hogness', color: '#DAA520', icon: '🐷👸', image: 'assets/pigs/15.hisroyalhogness.png' },
+    65536:  { tier: 16, name: 'The Cosmic Sow',   color: '#4B0082', icon: '🐷✨', image: 'assets/pigs/16.thecosmicsow.png' },
+    131072: { tier: 17, name: 'THE LION PIG',     color: null, icon: '🦁🐷', image: 'assets/pigs/17.thelionpig.png' }
 };
 
 // Get all pig values in order
@@ -649,16 +649,18 @@ class Game {
             element.style.backgroundColor = pig.color;
         }
 
-        // Create icon and name elements
-        const iconEl = document.createElement('div');
-        iconEl.className = 'tile-icon';
-        iconEl.textContent = pig.icon || '🐷';
+        // Create image element for pig
+        const imgEl = document.createElement('img');
+        imgEl.className = 'tile-image';
+        imgEl.src = pig.image;
+        imgEl.alt = pig.name;
+        imgEl.draggable = false;
 
         const nameEl = document.createElement('div');
         nameEl.className = 'tile-name';
         nameEl.textContent = pig.name;
 
-        element.appendChild(iconEl);
+        element.appendChild(imgEl);
         element.appendChild(nameEl);
         this.tileContainer.appendChild(element);
     }
@@ -920,10 +922,17 @@ class Game {
                 }
             }
 
-            badge.innerHTML = `
-                <div class="badge-icon">${isUnlocked ? (pig.icon || '🐷') : '?'}</div>
-                <div class="badge-name">${isUnlocked ? pig.name : '???'}</div>
-            `;
+            if (isUnlocked) {
+                badge.innerHTML = `
+                    <img class="badge-image" src="${pig.image}" alt="${pig.name}" draggable="false">
+                    <div class="badge-name">${pig.name}</div>
+                `;
+            } else {
+                badge.innerHTML = `
+                    <div class="badge-icon">?</div>
+                    <div class="badge-name">???</div>
+                `;
+            }
 
             this.badgeGrid.appendChild(badge);
         });

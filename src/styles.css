@@ -238,9 +238,12 @@ body {
     will-change: transform, top, left;
 }
 
-.tile-icon {
-    font-size: 1.5rem;
-    line-height: 1;
+.tile-image {
+    width: 60%;
+    height: auto;
+    max-height: 60%;
+    object-fit: contain;
+    pointer-events: none;
 }
 
 .tile-name {
@@ -624,6 +627,14 @@ body {
     margin-bottom: 5px;
 }
 
+.badge-item .badge-image {
+    width: 60%;
+    height: auto;
+    max-height: 60%;
+    object-fit: contain;
+    margin-bottom: 5px;
+}
+
 .badge-item .badge-name {
     font-size: 0.7rem;
     font-weight: 600;
@@ -670,8 +681,9 @@ body {
         padding: 2px;
     }
 
-    .tile-icon {
-        font-size: 1.2rem;
+    .tile-image {
+        width: 55%;
+        max-height: 55%;
     }
 
     .tile-name {
