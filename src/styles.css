@@ -306,6 +306,12 @@ body {
     font-size: 1rem;
 }
 
+.modal-subtext {
+    color: #999;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
 /* ========== GAME OVER SCREEN ========== */
 .gameover-screen, .win-screen {
     gap: 20px;

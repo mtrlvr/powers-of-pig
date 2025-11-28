@@ -93,8 +93,12 @@ class Game {
         // Overlays
         this.overlays = {
             pause: document.getElementById('pause-overlay'),
-            restart: document.getElementById('restart-overlay')
+            restart: document.getElementById('restart-overlay'),
+            purchase: document.getElementById('purchase-overlay')
         };
+
+        // Purchase modal elements
+        this.purchaseMessage = document.getElementById('purchase-message');
 
         // Game elements
         this.tileContainer = document.getElementById('tile-container');
@@ -709,9 +713,19 @@ class Game {
     // Handle purchasing lives (placeholder - simulates purchase)
     purchaseLives(count) {
         // In a real app, this would trigger payment flow
-        // For now, just add the lives
-        alert(`[Placeholder] You would purchase ${count} life/lives here!`);
-        this.addLife(count);
+        // For now, show a styled modal and add the lives
+        this.pendingPurchaseCount = count;
+        this.purchaseMessage.textContent = `You would purchase ${count} life${count > 1 ? 's' : ''} here!`;
+        this.showOverlay('purchase');
+    }
+
+    // Confirm the purchase (called when OK is clicked on modal)
+    confirmPurchase() {
+        if (this.pendingPurchaseCount) {
+            this.addLife(this.pendingPurchaseCount);
+            this.pendingPurchaseCount = null;
+        }
+        this.hideOverlay('purchase');
 
         // If we now have lives, go to home screen
         if (this.lives > 0) {
@@ -820,6 +834,11 @@ class Game {
         document.getElementById('nolives-home-button').addEventListener('click', () => {
             this.stopCountdownTimer();
             this.showScreen('home');
+        });
+
+        // Purchase modal OK button
+        document.getElementById('purchase-ok').addEventListener('click', () => {
+            this.confirmPurchase();
         });
 
         // Win screen buttons
