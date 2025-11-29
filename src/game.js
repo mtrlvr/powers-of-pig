@@ -37,181 +37,78 @@ const LIFE_REGEN_TIME = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
 // Local storage key
 const STORAGE_KEY = 'powersOfPig';
 
-// ========== SOUND SYSTEM (Web Audio API) ==========
+// ========== SOUND SYSTEM (Preloaded MP3 files) ==========
 class SoundSystem {
     constructor() {
-        this.audioContext = null;
         this.enabled = true;
+        this.sounds = {};  // Cache for preloaded Audio elements
+        this.loaded = false;
     }
 
-    // Initialize audio context (must be called after user interaction)
+    // Preload all 17 oink sounds
     init() {
-        if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.loaded) return;
+
+        // Oink sound file mapping: tier -> filename
+        const oinkFiles = {
+            1: 'oink-01-pip.mp3',
+            2: 'oink-02-sprout.mp3',
+            3: 'oink-03-trotter.mp3',
+            4: 'oink-04-hamlet.mp3',
+            5: 'oink-05-hog.mp3',
+            6: 'oink-06-siroinks.mp3',
+            7: 'oink-07-wiggleton.mp3',
+            8: 'oink-08-baronvonbubble.mp3',
+            9: 'oink-09-sherlockhams.mp3',
+            10: 'oink-10-sirloin.mp3',
+            11: 'oink-11-lordporkington.mp3',
+            12: 'oink-12-neilhamstrong.mp3',
+            13: 'oink-13-erikthepink.mp3',
+            14: 'oink-14-gandalftheham.mp3',
+            15: 'oink-15-hisroyalhogness.mp3',
+            16: 'oink-16-thecosmicsow.mp3',
+            17: 'oink-17-thelionpig.mp3'
+        };
+
+        // Preload all sounds
+        for (const [tier, filename] of Object.entries(oinkFiles)) {
+            const audio = new Audio(`assets/sounds/${filename}`);
+            audio.preload = 'auto';
+            // Clone audio for overlapping plays
+            this.sounds[tier] = audio;
         }
-        // Resume if suspended (browsers require user gesture)
-        if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume();
-        }
+
+        this.loaded = true;
     }
 
-    // Generate an oink sound for a specific pig tier (1-17)
-    // Each tier has a unique pitch, duration, and character
+    // Play an oink sound for a specific pig tier (1-17)
     playOink(tier) {
-        if (!this.enabled || !this.audioContext) return;
+        if (!this.enabled || !this.sounds[tier]) return;
 
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
-
-        // Base frequency increases with tier (higher pigs = higher pitch)
-        // Tier 1 (Pip) = 200Hz, Tier 17 (Lion Pig) = 800Hz
-        const baseFreq = 150 + (tier * 40);
-
-        // Duration gets slightly longer for higher tiers
-        const duration = 0.15 + (tier * 0.01);
-
-        // Create oscillator for the main oink tone
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-
-        // Use different waveforms for variety
-        // Lower tiers: sine (soft), mid tiers: triangle, high tiers: sawtooth (rich)
-        if (tier <= 5) {
-            osc.type = 'sine';
-        } else if (tier <= 11) {
-            osc.type = 'triangle';
-        } else {
-            osc.type = 'sawtooth';
-        }
-
-        // Frequency envelope - quick pitch drop gives "oink" character
-        osc.frequency.setValueAtTime(baseFreq * 1.3, now);
-        osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.7, now + duration * 0.3);
-        osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + duration);
-
-        // Volume envelope - quick attack, medium decay
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.3, now + 0.02);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
-
-        // Connect and play
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + duration + 0.05);
-
-        // For higher tiers (8+), add a harmonic for richness
-        if (tier >= 8) {
-            const osc2 = ctx.createOscillator();
-            const gain2 = ctx.createGain();
-
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(baseFreq * 2, now);
-            osc2.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + duration);
-
-            gain2.gain.setValueAtTime(0, now);
-            gain2.gain.linearRampToValueAtTime(0.1, now + 0.02);
-            gain2.gain.exponentialRampToValueAtTime(0.01, now + duration);
-
-            osc2.connect(gain2);
-            gain2.connect(ctx.destination);
-
-            osc2.start(now);
-            osc2.stop(now + duration + 0.05);
-        }
-
-        // For THE LION PIG (tier 17), add a special triumphant sound
-        if (tier === 17) {
-            this.playLionPigFanfare();
+        try {
+            // Clone the audio element to allow overlapping plays
+            const sound = this.sounds[tier].cloneNode();
+            sound.volume = 0.7;
+            sound.play().catch(() => {
+                // Autoplay might be blocked - fail silently
+            });
+        } catch (e) {
+            // Audio playback failed - fail silently
         }
     }
 
-    // Special fanfare for reaching THE LION PIG
-    playLionPigFanfare() {
-        if (!this.audioContext) return;
-
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
-
-        // Play a triumphant arpeggio
-        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-
-        notes.forEach((freq, i) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, now + i * 0.1);
-
-            gain.gain.setValueAtTime(0, now + i * 0.1);
-            gain.gain.linearRampToValueAtTime(0.2, now + i * 0.1 + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.3);
-
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-
-            osc.start(now + i * 0.1);
-            osc.stop(now + i * 0.1 + 0.35);
-        });
-    }
-
-    // Play a soft pop sound for spawning new tiles
+    // Play a soft pop sound for spawning new tiles (use tier 1 sound quietly)
     playSpawn() {
-        if (!this.enabled || !this.audioContext) return;
+        if (!this.enabled || !this.sounds[1]) return;
 
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
-
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(600, now);
-        osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
-
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + 0.1);
-    }
-
-    // Play a slide/swoosh sound for tile movement
-    playSlide() {
-        if (!this.enabled || !this.audioContext) return;
-
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
-
-        // White noise burst for swoosh effect
-        const bufferSize = ctx.sampleRate * 0.05;
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-
-        for (let i = 0; i < bufferSize; i++) {
-            data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+        try {
+            const sound = this.sounds[1].cloneNode();
+            sound.volume = 0.2;
+            sound.playbackRate = 1.5;  // Play faster for a "pop" feel
+            sound.play().catch(() => {});
+        } catch (e) {
+            // Fail silently
         }
-
-        const noise = ctx.createBufferSource();
-        const gain = ctx.createGain();
-        const filter = ctx.createBiquadFilter();
-
-        noise.buffer = buffer;
-        filter.type = 'highpass';
-        filter.frequency.setValueAtTime(2000, now);
-
-        gain.gain.setValueAtTime(0.05, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
-
-        noise.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
-
-        noise.start(now);
     }
 
     setEnabled(enabled) {
@@ -223,43 +120,39 @@ class SoundSystem {
 const soundSystem = new SoundSystem();
 
 // ========== HAPTICS SYSTEM (Vibration API) ==========
+// NOTE: Haptics are always enabled, independent of sound toggle
 class HapticsSystem {
     constructor() {
-        this.enabled = true;
         this.supported = 'vibrate' in navigator;
     }
 
     // Vibrate with a pattern for a specific pig tier (1-17)
-    // Higher tiers get stronger, more complex vibration patterns
+    // Patterns based on tier groups as specified:
+    // - Tier 1-4: Light quick tap [50]
+    // - Tier 5-8: Medium pulse [100]
+    // - Tier 9-12: Strong thud [150]
+    // - Tier 13-16: Double pulse [75, 50, 75]
+    // - Tier 17: Triumphant pattern [100, 30, 100, 30, 200]
     vibrateForTier(tier) {
-        if (!this.enabled || !this.supported) return;
+        if (!this.supported) return;
 
-        // Pattern intensity and complexity increases with tier
-        // Format: [vibrate, pause, vibrate, pause, ...]
         let pattern;
 
-        if (tier <= 3) {
-            // Tiers 1-3: Single short buzz (10-30ms)
-            pattern = [10 + tier * 7];
-        } else if (tier <= 6) {
-            // Tiers 4-6: Double tap
-            const duration = 15 + (tier - 3) * 10;
-            pattern = [duration, 30, duration];
-        } else if (tier <= 10) {
-            // Tiers 7-10: Triple pulse with increasing intensity
-            const duration = 20 + (tier - 6) * 8;
-            pattern = [duration, 25, duration, 25, duration];
-        } else if (tier <= 14) {
-            // Tiers 11-14: Rolling vibration
-            const duration = 25 + (tier - 10) * 10;
-            pattern = [duration, 20, duration * 0.7, 20, duration * 1.3];
+        if (tier <= 4) {
+            // Tiers 1-4 (Pip → Hamlet): Light quick tap
+            pattern = [50];
+        } else if (tier <= 8) {
+            // Tiers 5-8 (Hog → Baron von Bubble): Medium pulse
+            pattern = [100];
+        } else if (tier <= 12) {
+            // Tiers 9-12 (Sherlock Hams → Neil Hamstrong): Strong thud
+            pattern = [150];
         } else if (tier <= 16) {
-            // Tiers 15-16: Strong pulsing pattern
-            const duration = 40 + (tier - 14) * 15;
-            pattern = [duration, 30, duration, 30, duration, 30, duration];
+            // Tiers 13-16 (Erik the Pink → The Cosmic Sow): Double pulse
+            pattern = [75, 50, 75];
         } else {
-            // Tier 17 (THE LION PIG): Epic celebration pattern!
-            pattern = [50, 30, 50, 30, 100, 50, 100, 50, 150];
+            // Tier 17 (THE LION PIG): Triumphant pattern!
+            pattern = [100, 30, 100, 30, 200];
         }
 
         try {
@@ -271,7 +164,7 @@ class HapticsSystem {
 
     // Light tap for spawning new tiles
     vibrateSpawn() {
-        if (!this.enabled || !this.supported) return;
+        if (!this.supported) return;
 
         try {
             navigator.vibrate(8);
@@ -282,7 +175,7 @@ class HapticsSystem {
 
     // Quick feedback for button presses
     vibrateButton() {
-        if (!this.enabled || !this.supported) return;
+        if (!this.supported) return;
 
         try {
             navigator.vibrate(5);
@@ -293,7 +186,7 @@ class HapticsSystem {
 
     // Sad vibration for game over
     vibrateGameOver() {
-        if (!this.enabled || !this.supported) return;
+        if (!this.supported) return;
 
         try {
             // Descending pattern feels "deflating"
@@ -301,10 +194,6 @@ class HapticsSystem {
         } catch (e) {
             // Fail silently
         }
-    }
-
-    setEnabled(enabled) {
-        this.enabled = enabled;
     }
 }
 
@@ -489,7 +378,7 @@ class Game {
         // Initialize sound on first user interaction
         soundSystem.init();
         soundSystem.setEnabled(this.soundEnabled);
-        hapticsSystem.setEnabled(this.soundEnabled);
+        // Haptics are always on, independent of sound toggle
 
         this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
         this.score = 0;
@@ -944,7 +833,7 @@ class Game {
     toggleSound() {
         this.soundEnabled = !this.soundEnabled;
         soundSystem.setEnabled(this.soundEnabled);
-        hapticsSystem.setEnabled(this.soundEnabled);
+        // Haptics remain always on, independent of sound toggle
         this.updateSoundButton();
         this.saveGame();
     }
