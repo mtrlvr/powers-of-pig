@@ -455,7 +455,7 @@ body {
 }
 
 .modal-subtext {
-    color: #999;
+    color: #8a9a82;
     font-size: 0.85rem;
     font-style: italic;
 }
@@ -469,18 +469,19 @@ body {
 
 .gameover-screen h2, .win-screen h2 {
     font-size: 2rem;
-    color: #776e65;
+    color: #5a6f52;
 }
 
 .final-score {
     font-size: 1.3rem;
-    color: #776e65;
+    color: #6b7d63;
     display: flex;
     gap: 10px;
 }
 
 #final-score {
     font-weight: 700;
+    color: #5a6f52;
 }
 
 .highest-pig {
@@ -488,29 +489,37 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    color: #776e65;
+    color: #6b7d63;
 }
 
 .pig-badge {
     padding: 15px 25px;
-    border-radius: 8px;
+    border-radius: 12px;
     font-weight: 700;
     font-size: 1rem;
     color: #fff;
+    box-shadow:
+        0 4px 8px rgba(0,0,0,0.15),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .new-pig-unlocked {
-    background: #f2b179;
+    background: linear-gradient(to bottom, #e8a68e, #d88068);
     padding: 20px;
-    border-radius: 12px;
+    border-radius: 14px;
     text-align: center;
     animation: celebrate 0.5s ease-out;
+    box-shadow:
+        0 6px 16px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 .new-pig-unlocked p {
     color: #fff;
     font-weight: 600;
     margin-bottom: 10px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 @keyframes celebrate {
@@ -522,18 +531,21 @@ body {
 /* ========== WIN SCREEN ========== */
 .win-message {
     font-size: 1.2rem;
-    color: #776e65;
+    color: #6b7d63;
 }
 
 .lion-pig-badge {
     background: linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6);
     padding: 20px 30px;
-    border-radius: 12px;
+    border-radius: 14px;
     font-size: 1.5rem;
     font-weight: 700;
     color: #fff;
-    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+    text-shadow: 0 0 10px rgba(255,255,255,0.5), 0 2px 4px rgba(0,0,0,0.2);
     animation: rainbow 2s infinite;
+    box-shadow:
+        0 8px 20px rgba(0,0,0,0.25),
+        inset 0 1px 0 rgba(255,255,255,0.3);
 }
 
 @keyframes rainbow {
@@ -572,7 +584,7 @@ body {
 
 .nolives-screen h2 {
     font-size: 2rem;
-    color: #776e65;
+    color: #5a6f52;
 }
 
 .nolives-pig {
@@ -584,14 +596,14 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 5px;
-    color: #776e65;
+    color: #6b7d63;
     font-size: 1rem;
 }
 
 #next-life-countdown {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #f2b179;
+    color: #d88068;
 }
 
 .purchase-options {
@@ -607,18 +619,33 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 15px 20px;
-    background: #27ae60;
+    background: linear-gradient(to bottom, #85b87a, #6b9a60);
     color: #fff;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
     font-size: 1rem;
     font-weight: 600;
-    transition: background 0.2s;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow:
+        0 4px 8px rgba(0,0,0,0.15),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .btn-purchase:hover {
-    background: #2ecc71;
+    background: linear-gradient(to bottom, #7dad71, #5f8a55);
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 12px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.btn-purchase:active {
+    transform: scale(0.97);
+    box-shadow:
+        0 2px 4px rgba(0,0,0,0.15),
+        inset 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .purchase-label {
@@ -626,9 +653,9 @@ body {
 }
 
 .purchase-price {
-    background: rgba(255,255,255,0.2);
-    padding: 5px 10px;
-    border-radius: 4px;
+    background: rgba(255,255,255,0.25);
+    padding: 6px 12px;
+    border-radius: 8px;
 }
 
 /* ========== COLLECTION SCREEN ========== */
@@ -647,12 +674,12 @@ body {
 
 .collection-header h2 {
     font-size: 1.5rem;
-    color: #776e65;
+    color: #5a6f52;
 }
 
 .collection-progress {
     font-size: 1rem;
-    color: #776e65;
+    color: #6b7d63;
     font-weight: 600;
 }
 
@@ -666,22 +693,34 @@ body {
 
 .badge-item {
     aspect-ratio: 1;
-    border-radius: 12px;
+    border-radius: 14px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: 10px;
     text-align: center;
+    box-shadow:
+        0 3px 8px rgba(0,0,0,0.15),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.badge-item:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 5px 12px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 .badge-item.locked {
-    background: #ccc;
-    color: #999;
+    background: linear-gradient(to bottom, #d0d0d0, #b8b8b8);
+    color: #888;
 }
 
 .badge-item.locked .badge-name {
-    color: #999;
+    color: #888;
 }
 
 .badge-item .badge-icon {
@@ -702,6 +741,7 @@ body {
     font-weight: 600;
     color: #fff;
     word-wrap: break-word;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .badge-item.unlocked {
