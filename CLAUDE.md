@@ -27,17 +27,29 @@ src/
 
 - **Single-page app** with vanilla HTML/CSS/JavaScript (no frameworks)
 - **Game class** in game.js handles all game state, logic, and rendering
-- **Grid-based rendering** - CSS Grid for background cells, absolute positioning for animated tiles
+- **Grid-based rendering** - CSS Grid for both background cells AND tile positioning (no JS pixel math)
 - **Touch + keyboard input** - swipe detection (with threshold) and arrow keys
 - **Lives system** - 3 lives max, 4-hour regeneration timer, persisted to localStorage
-- **Sound system** - Web Audio API with 17 unique oink sounds (different pitches per tier)
+- **Sound system** - Preloaded MP3 files with 17 unique oink sounds per tier
 - **Haptics** - Vibration API patterns synced with sounds on supported devices
 - **Persistence** - localStorage for game state, unlocked badges, lives, high score
+
+## Development Philosophy
+
+**Keep it simple.** This is a casual mobile game - avoid over-engineering:
+- Let CSS handle layout (Grid, Flexbox) instead of calculating pixels in JS
+- Don't add abstractions until they're clearly needed
+- Test on mobile early and often - mobile browsers behave differently
 
 ## Key Implementation Details
 
 ### Tile Positioning
-Tiles use `getBoundingClientRect()` to measure actual cell positions at runtime, storing `xOffset`/`yOffset` to ensure perfect alignment with grid cells across different screen sizes.
+Tiles use **CSS Grid placement** (`grid-column` and `grid-row`) - NOT JavaScript pixel calculations. Both `.grid-background` (cells) and `.tile-container` (tiles) use identical CSS Grid layouts, so tiles automatically align perfectly on all screen sizes and browsers.
+
+**Important lesson learned:** Don't overcomplicate tile positioning with JS measurements (`getBoundingClientRect`, `getComputedStyle`, etc.). CSS Grid handles responsive layouts natively - just place tiles in grid cells and let CSS do the work.
+
+### Sound System (Mobile)
+Audio uses `currentTime = 0` reset instead of `cloneNode()` - mobile browsers don't reliably clone audio elements.
 
 ### PIGS Constant
 Each tier defined with: `{ tier, name, color, icon, image }` - image paths point to `assets/pigs/` folder.

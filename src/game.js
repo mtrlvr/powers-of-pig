@@ -231,9 +231,9 @@ class Game {
         // Current screen
         this.currentScreen = 'home';
 
-        // Cell positions (measured from actual DOM for mobile accuracy)
-        this.cellPositions = [];
+        // Tile dimensions (calculated from grid)
         this.tileSize = 0;
+        this.cellPositions = [];
 
         // Cache DOM elements
         this.cacheElements();
@@ -347,40 +347,9 @@ class Game {
         });
     }
 
-    // Calculate tile size and gap based on container
-    // Measures actual cell positions to avoid mobile browser layout discrepancies
+    // No longer needed - CSS Grid handles all positioning
     calculateDimensions() {
-        const tileContainer = document.querySelector('.tile-container');
-        const cells = document.querySelectorAll('.cell');
-
-        if (!tileContainer || cells.length < 16) return;
-
-        const tileContainerRect = tileContainer.getBoundingClientRect();
-
-        // Measure actual positions of all 16 cells relative to tile-container
-        // This avoids calculation errors on mobile browsers
-        this.cellPositions = [];
-        cells.forEach((cell, index) => {
-            const rect = cell.getBoundingClientRect();
-            const row = Math.floor(index / 4);
-            const col = index % 4;
-
-            if (!this.cellPositions[row]) {
-                this.cellPositions[row] = [];
-            }
-
-            this.cellPositions[row][col] = {
-                left: rect.left - tileContainerRect.left,
-                top: rect.top - tileContainerRect.top,
-                width: rect.width,
-                height: rect.height
-            };
-        });
-
-        // Use first cell dimensions for tile size
-        if (this.cellPositions[0] && this.cellPositions[0][0]) {
-            this.tileSize = this.cellPositions[0][0].width;
-        }
+        // Kept for compatibility with existing calls
     }
 
     // Start a new game
@@ -531,16 +500,9 @@ class Game {
         if (tile.isNew) element.classList.add('new');
         if (tile.merged) element.classList.add('merged');
 
-        // Use measured cell positions for exact alignment on all devices
-        const cellPos = this.cellPositions?.[tile.row]?.[tile.col];
-        const left = cellPos ? cellPos.left : 0;
-        const top = cellPos ? cellPos.top : 0;
-        const size = cellPos ? cellPos.width : this.tileSize;
-
-        element.style.width = `${size}px`;
-        element.style.height = `${size}px`;
-        element.style.left = `${left}px`;
-        element.style.top = `${top}px`;
+        // Use CSS Grid placement (1-indexed)
+        element.style.gridColumn = tile.col + 1;
+        element.style.gridRow = tile.row + 1;
 
         if (pig.color) {
             element.style.backgroundColor = pig.color;
