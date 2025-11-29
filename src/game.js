@@ -87,8 +87,9 @@ class SoundSystem {
         if (!this.enabled || !this.sounds[tier]) return;
 
         try {
-            // Clone the audio element to allow overlapping plays
-            const sound = this.sounds[tier].cloneNode();
+            // Reuse audio element (cloneNode doesn't work reliably on mobile)
+            const sound = this.sounds[tier];
+            sound.currentTime = 0;
             sound.volume = 0.7;
             sound.play().catch(() => {
                 // Autoplay might be blocked - fail silently
@@ -103,7 +104,9 @@ class SoundSystem {
         if (!this.enabled || !this.sounds[1]) return;
 
         try {
-            const sound = this.sounds[1].cloneNode();
+            // Reuse audio element (cloneNode doesn't work reliably on mobile)
+            const sound = this.sounds[1];
+            sound.currentTime = 0;
             sound.volume = 0.2;
             sound.playbackRate = 1.5;  // Play faster for a "pop" feel
             sound.play().catch(() => {});
@@ -228,6 +231,10 @@ class Game {
         // Current screen
         this.currentScreen = 'home';
 
+        // Cell positions (measured from actual DOM for mobile accuracy)
+        this.cellPositions = [];
+        this.tileSize = 0;
+
         // Cache DOM elements
         this.cacheElements();
 
@@ -305,11 +312,14 @@ class Game {
         }
 
         // Recalculate dimensions when showing game screen
+        // Use double requestAnimationFrame to ensure CSS Grid layout is complete on mobile
         if (screenName === 'game') {
-            setTimeout(() => {
-                this.calculateDimensions();
-                this.render();
-            }, 10);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    this.calculateDimensions();
+                    this.render();
+                });
+            });
         }
 
         // Populate collection screen
@@ -338,40 +348,39 @@ class Game {
     }
 
     // Calculate tile size and gap based on container
+    // Measures actual cell positions to avoid mobile browser layout discrepancies
     calculateDimensions() {
-        const gridBackground = document.querySelector('.grid-background');
         const tileContainer = document.querySelector('.tile-container');
-        const firstCell = document.querySelector('.cell');
+        const cells = document.querySelectorAll('.cell');
 
-        if (!gridBackground || !tileContainer || !firstCell) return;
+        if (!tileContainer || cells.length < 16) return;
 
-        // Get the grid's computed dimensions (this is the area for cells)
-        const gridWidth = gridBackground.clientWidth;
-        const gridHeight = gridBackground.clientHeight;
-
-        // Get gap from CSS (8px on mobile, 12px on desktop)
-        this.gap = window.innerWidth <= 520 ? 8 : 12;
-
-        // CSS grid with 4 columns of 1fr and 3 gaps:
-        // gridWidth = 4 * tileSize + 3 * gap
-        // tileSize = (gridWidth - 3 * gap) / 4
-        this.tileSize = (gridWidth - (this.gap * 3)) / 4;
-
-        // For height, same calculation
-        const tileSizeFromHeight = (gridHeight - (this.gap * 3)) / 4;
-
-        // Use the smaller of the two to ensure tiles fit
-        // (should be equal for aspect-ratio: 1, but just in case)
-        this.tileSize = Math.min(this.tileSize, tileSizeFromHeight);
-
-        // Calculate the actual Y offset between where we think tiles should go
-        // and where the CSS grid actually places cells
         const tileContainerRect = tileContainer.getBoundingClientRect();
-        const firstCellRect = firstCell.getBoundingClientRect();
 
-        // The offset is where the first cell actually is, relative to tile-container
-        this.yOffset = firstCellRect.top - tileContainerRect.top;
-        this.xOffset = firstCellRect.left - tileContainerRect.left;
+        // Measure actual positions of all 16 cells relative to tile-container
+        // This avoids calculation errors on mobile browsers
+        this.cellPositions = [];
+        cells.forEach((cell, index) => {
+            const rect = cell.getBoundingClientRect();
+            const row = Math.floor(index / 4);
+            const col = index % 4;
+
+            if (!this.cellPositions[row]) {
+                this.cellPositions[row] = [];
+            }
+
+            this.cellPositions[row][col] = {
+                left: rect.left - tileContainerRect.left,
+                top: rect.top - tileContainerRect.top,
+                width: rect.width,
+                height: rect.height
+            };
+        });
+
+        // Use first cell dimensions for tile size
+        if (this.cellPositions[0] && this.cellPositions[0][0]) {
+            this.tileSize = this.cellPositions[0][0].width;
+        }
     }
 
     // Start a new game
@@ -522,14 +531,14 @@ class Game {
         if (tile.isNew) element.classList.add('new');
         if (tile.merged) element.classList.add('merged');
 
-        // Calculate position with offset correction for exact cell alignment
-        const xOffset = this.xOffset || 0;
-        const yOffset = this.yOffset || 0;
-        const left = xOffset + tile.col * (this.tileSize + this.gap);
-        const top = yOffset + tile.row * (this.tileSize + this.gap);
+        // Use measured cell positions for exact alignment on all devices
+        const cellPos = this.cellPositions?.[tile.row]?.[tile.col];
+        const left = cellPos ? cellPos.left : 0;
+        const top = cellPos ? cellPos.top : 0;
+        const size = cellPos ? cellPos.width : this.tileSize;
 
-        element.style.width = `${this.tileSize}px`;
-        element.style.height = `${this.tileSize}px`;
+        element.style.width = `${size}px`;
+        element.style.height = `${size}px`;
         element.style.left = `${left}px`;
         element.style.top = `${top}px`;
 
