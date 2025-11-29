@@ -458,9 +458,7 @@ class Game {
         // Track unlocked pigs
         this.unlockPig(value);
 
-        // Play spawn sound and light haptic
-        soundSystem.playSpawn();
-        hapticsSystem.vibrateSpawn();
+        // No sound/haptic for spawning - only play on merge
 
         return true;
     }
@@ -562,6 +560,7 @@ class Game {
         this.saveState();
 
         let moved = false;
+        let highestMergeTier = 0;  // Track highest tier pig created from merges
 
         // Reset merged flags
         for (let row = 0; row < this.size; row++) {
@@ -576,7 +575,9 @@ class Game {
             for (let row = 0; row < this.size; row++) {
                 for (let col = 1; col < this.size; col++) {
                     if (this.grid[row][col]) {
-                        moved = this.moveTile(row, col, 0, -1) || moved;
+                        const result = this.moveTile(row, col, 0, -1);
+                        moved = result.moved || moved;
+                        highestMergeTier = Math.max(highestMergeTier, result.mergeTier);
                     }
                 }
             }
@@ -584,7 +585,9 @@ class Game {
             for (let row = 0; row < this.size; row++) {
                 for (let col = this.size - 2; col >= 0; col--) {
                     if (this.grid[row][col]) {
-                        moved = this.moveTile(row, col, 0, 1) || moved;
+                        const result = this.moveTile(row, col, 0, 1);
+                        moved = result.moved || moved;
+                        highestMergeTier = Math.max(highestMergeTier, result.mergeTier);
                     }
                 }
             }
@@ -592,7 +595,9 @@ class Game {
             for (let col = 0; col < this.size; col++) {
                 for (let row = 1; row < this.size; row++) {
                     if (this.grid[row][col]) {
-                        moved = this.moveTile(row, col, -1, 0) || moved;
+                        const result = this.moveTile(row, col, -1, 0);
+                        moved = result.moved || moved;
+                        highestMergeTier = Math.max(highestMergeTier, result.mergeTier);
                     }
                 }
             }
@@ -600,13 +605,21 @@ class Game {
             for (let col = 0; col < this.size; col++) {
                 for (let row = this.size - 2; row >= 0; row--) {
                     if (this.grid[row][col]) {
-                        moved = this.moveTile(row, col, 1, 0) || moved;
+                        const result = this.moveTile(row, col, 1, 0);
+                        moved = result.moved || moved;
+                        highestMergeTier = Math.max(highestMergeTier, result.mergeTier);
                     }
                 }
             }
         }
 
         if (moved) {
+            // Play sound/haptic for highest tier merge only (if any merges occurred)
+            if (highestMergeTier > 0) {
+                soundSystem.playOink(highestMergeTier);
+                hapticsSystem.vibrateForTier(highestMergeTier);
+            }
+
             this.spawnTile();
             this.render();
 
@@ -630,9 +643,10 @@ class Game {
     }
 
     // Move a single tile as far as possible in the given direction
+    // Returns { moved: boolean, mergeTier: number } where mergeTier is 0 if no merge
     moveTile(row, col, rowDir, colDir) {
         const tile = this.grid[row][col];
-        if (!tile) return false;
+        if (!tile) return { moved: false, mergeTier: 0 };
 
         let newRow = row;
         let newCol = col;
@@ -676,23 +690,22 @@ class Game {
                 this.score += newValue;
                 this.updateScore();
 
-                // Play oink sound and haptic feedback for the new pig tier
-                const pig = getPig(newValue);
-                soundSystem.playOink(pig.tier);
-                hapticsSystem.vibrateForTier(pig.tier);
-
                 // Unlock new pig
                 this.unlockPig(newValue);
+
+                // Return the tier of the merged pig (sound/haptic handled in move())
+                const pig = getPig(newValue);
+                return { moved: true, mergeTier: pig.tier };
             } else {
                 tile.row = newRow;
                 tile.col = newCol;
                 this.grid[newRow][newCol] = tile;
             }
 
-            return true;
+            return { moved: true, mergeTier: 0 };
         }
 
-        return false;
+        return { moved: false, mergeTier: 0 };
     }
 
     // Check if player has won
