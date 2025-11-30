@@ -10,8 +10,28 @@
     <script defer data-domain="powersofpig.com" src="https://va.vercel-scripts.com/v1/script.js"></script>
 </head>
 <body>
+    <!-- PASSWORD GATE SCREEN -->
+    <div class="screen gate-screen" id="gate-screen">
+        <div class="gate-pig">🐷</div>
+        <h1 class="gate-title">Enter the Sty</h1>
+        <form class="gate-form" id="gate-form">
+            <input
+                type="password"
+                class="gate-input"
+                id="gate-password"
+                placeholder="Password"
+                autocomplete="off"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+            >
+            <button type="submit" class="btn btn-primary gate-btn">Enter</button>
+        </form>
+        <p class="gate-error" id="gate-error"></p>
+    </div>
+
     <!-- HOME SCREEN -->
-    <div class="screen home-screen active" id="home-screen">
+    <div class="screen home-screen" id="home-screen">
         <h1 class="home-title">Powers of Pig</h1>
         <div class="lives-display" id="home-lives">
             <span class="life-icon">🐷</span>

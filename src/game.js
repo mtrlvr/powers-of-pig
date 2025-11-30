@@ -35,8 +35,9 @@ function getPig(value) {
 const MAX_LIVES = 3;
 const LIFE_REGEN_TIME = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
 
-// Local storage key
+// Local storage keys
 const STORAGE_KEY = 'powersOfPig';
+const AUTH_KEY = 'powersOfPigAuth';
 
 // ========== SOUND SYSTEM (Preloaded MP3 files) ==========
 class SoundSystem {
@@ -260,6 +261,7 @@ class Game {
     cacheElements() {
         // Screens
         this.screens = {
+            gate: document.getElementById('gate-screen'),
             home: document.getElementById('home-screen'),
             game: document.getElementById('game-screen'),
             gameover: document.getElementById('gameover-screen'),
@@ -1211,7 +1213,63 @@ class Game {
     }
 }
 
+// ========== PASSWORD GATE ==========
+function checkAuthentication() {
+    try {
+        return localStorage.getItem(AUTH_KEY) === 'true';
+    } catch (e) {
+        return false;
+    }
+}
+
+function setAuthenticated() {
+    try {
+        localStorage.setItem(AUTH_KEY, 'true');
+    } catch (e) {
+        // Storage might be disabled - continue anyway
+    }
+}
+
+function setupGate() {
+    const gateScreen = document.getElementById('gate-screen');
+    const gateForm = document.getElementById('gate-form');
+    const gatePassword = document.getElementById('gate-password');
+    const gateError = document.getElementById('gate-error');
+
+    // Show gate screen
+    gateScreen.classList.add('active');
+
+    // Focus password input
+    gatePassword.focus();
+
+    gateForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const password = gatePassword.value.toLowerCase().trim();
+
+        if (password === 'cochon') {
+            // Correct password
+            setAuthenticated();
+            gateScreen.classList.remove('active');
+            gateError.textContent = '';
+            // Start the game
+            new Game();
+        } else {
+            // Wrong password
+            gateError.textContent = 'Wrong snort, try again.';
+            gatePassword.value = '';
+            gatePassword.focus();
+        }
+    });
+}
+
 // Start the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new Game();
+    if (checkAuthentication()) {
+        // Already authenticated, start game directly
+        new Game();
+    } else {
+        // Show password gate
+        setupGate();
+    }
 });
