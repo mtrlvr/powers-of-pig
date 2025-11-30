@@ -1,6 +1,10 @@
 // Powers of Pig - Core Game Engine
 // A 2048 clone with pig theming
 
+// Supabase configuration
+const SUPABASE_URL = 'https://jsfhxldbdxhrrjapsmdk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzZmh4bGRiZHhocnJqYXBzbWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1MDc3NTksImV4cCI6MjA4MDA4Mzc1OX0.InNcVlZr0kvDJuciGTDHWTQwgJQYYiwGBQB4sidfGJ0';
+
 // The 17 Pigs - mapping value to pig data
 const PIGS = {
     // Softer, more pastel colors for cozy aesthetic
@@ -274,8 +278,13 @@ class Game {
         this.overlays = {
             pause: document.getElementById('pause-overlay'),
             restart: document.getElementById('restart-overlay'),
-            purchase: document.getElementById('purchase-overlay')
+            purchase: document.getElementById('purchase-overlay'),
+            feedback: document.getElementById('feedback-overlay')
         };
+
+        // Feedback modal elements
+        this.feedbackButtons = document.getElementById('feedback-buttons');
+        this.feedbackThanks = document.getElementById('feedback-thanks');
 
         // Purchase modal elements
         this.purchaseMessage = document.getElementById('purchase-message');
@@ -751,6 +760,7 @@ class Game {
         // Sad haptic feedback
         hapticsSystem.vibrateGameOver();
 
+        // Prepare game over screen data
         this.finalScoreElement.textContent = this.score;
 
         const highestValue = this.getHighestPig();
@@ -765,7 +775,58 @@ class Game {
         // Hide new pig message for now (will implement in persistence phase)
         this.newPigMessage.style.display = 'none';
 
-        this.showScreen('gameover');
+        // Show feedback modal first, then game over screen
+        this.showFeedbackModal(() => {
+            this.showScreen('gameover');
+        });
+    }
+
+    // Show feedback modal
+    showFeedbackModal(onComplete) {
+        // Reset modal state
+        this.feedbackButtons.style.display = 'flex';
+        this.feedbackThanks.style.display = 'none';
+        this.feedbackOnComplete = onComplete;
+
+        this.showOverlay('feedback');
+    }
+
+    // Handle feedback submission
+    async submitFeedback(rating) {
+        // Show thanks message
+        this.feedbackButtons.style.display = 'none';
+        this.feedbackThanks.style.display = 'block';
+
+        // Send to Supabase
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/feedback`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({ rating })
+            });
+        } catch (e) {
+            // Fail silently - don't block game flow
+            console.warn('Could not submit feedback:', e);
+        }
+
+        // Wait 1 second, then close modal and continue
+        setTimeout(() => {
+            this.closeFeedbackModal();
+        }, 1000);
+    }
+
+    // Close feedback modal and continue to game over
+    closeFeedbackModal() {
+        this.hideOverlay('feedback');
+        if (this.feedbackOnComplete) {
+            this.feedbackOnComplete();
+            this.feedbackOnComplete = null;
+        }
     }
 
     // Show win screen
@@ -1129,6 +1190,19 @@ class Game {
         // Purchase modal OK button
         document.getElementById('purchase-ok').addEventListener('click', () => {
             this.confirmPurchase();
+        });
+
+        // Feedback modal buttons
+        document.getElementById('feedback-close').addEventListener('click', () => {
+            this.closeFeedbackModal();
+        });
+
+        document.getElementById('feedback-up').addEventListener('click', () => {
+            this.submitFeedback('up');
+        });
+
+        document.getElementById('feedback-down').addEventListener('click', () => {
+            this.submitFeedback('down');
         });
 
         // Win screen buttons
