@@ -33,6 +33,7 @@ src/
 - **Sound system** - Preloaded MP3 files with 17 unique oink sounds per tier
 - **Haptics** - Vibration API patterns synced with sounds on supported devices
 - **Persistence** - localStorage for game state, unlocked badges, lives, high score
+- **Password gate** - Simple auth screen before game loads, password stored in localStorage
 
 ## Development Philosophy
 
@@ -55,7 +56,10 @@ Audio uses `currentTime = 0` reset instead of `cloneNode()` - mobile browsers do
 Each tier defined with: `{ tier, name, color, icon, image }` - image paths point to `assets/pigs/` folder.
 
 ### Screens
-- Home, Game, Pause (overlay), Game Over, Win, Collection (badge gallery), Out of Lives
+- Gate (password entry), Home, Game, Pause (overlay), Game Over, Win, Collection (badge gallery), Out of Lives
+
+### Password Gate
+The gate screen appears first on load. Password is "cochon" (case-insensitive). Authentication is stored in localStorage (`powersOfPigAuth`). Returning users skip the gate automatically. The gate logic lives at the bottom of game.js with `setupGate()`, `checkAuthentication()`, and `setAuthenticated()` functions.
 
 ## Build Phases (All Complete)
 
@@ -68,3 +72,4 @@ Each tier defined with: `{ tier, name, color, icon, image }` - image paths point
 7. **Sound** - 17 unique oink sounds using Web Audio API oscillators
 8. **Haptics** - Vibration patterns on move, merge, win, game over
 9. **Visual Polish** - Custom pig images, tile alignment fixes, responsive design
+10. **Password Gate** - Simple password screen before game loads
