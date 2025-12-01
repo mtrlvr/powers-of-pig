@@ -62,7 +62,11 @@ Each tier defined with: `{ tier, name, color, icon, image }` - image paths point
 The gate screen appears first on load. Password is "cochon" (case-insensitive). Authentication is stored in localStorage (`powersOfPigAuth`). Returning users skip the gate automatically. The gate logic lives at the bottom of game.js with `setupGate()`, `checkAuthentication()`, and `setAuthenticated()` functions.
 
 ### Feedback System
-On game over, a feedback modal appears before the game over screen. Players can rate with thumbs up/down, which sends data to Supabase. The modal can be skipped with the X button. Supabase config (URL and anon key) is at the top of game.js.
+Two feedback mechanisms exist:
+1. **Thumbs up/down modal** - Appears on game over before the game over screen. Players rate with 👍/👎, data sent to Supabase `feedback` table. Can be skipped with X button.
+2. **In-game comment feedback** - "Give Feedback" link below the game board opens a modal for qualitative text feedback (500 word limit). Captures comment, highest pig tier reached, and device type. Data sent to Supabase `player_feedback_comments` table.
+
+Supabase config (URL and anon key) is at the top of game.js.
 
 ## Build Phases (All Complete)
 
@@ -77,3 +81,4 @@ On game over, a feedback modal appears before the game over screen. Players can 
 9. **Visual Polish** - Custom pig images, tile alignment fixes, responsive design
 10. **Password Gate** - Simple password screen before game loads
 11. **Feedback System** - Thumbs up/down rating on game over, stored in Supabase
+12. **In-Game Feedback** - "Give Feedback" link for qualitative text comments during gameplay

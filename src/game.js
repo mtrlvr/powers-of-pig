@@ -279,12 +279,18 @@ class Game {
             pause: document.getElementById('pause-overlay'),
             restart: document.getElementById('restart-overlay'),
             purchase: document.getElementById('purchase-overlay'),
-            feedback: document.getElementById('feedback-overlay')
+            feedback: document.getElementById('feedback-overlay'),
+            commentFeedback: document.getElementById('comment-feedback-overlay')
         };
 
         // Feedback modal elements
         this.feedbackButtons = document.getElementById('feedback-buttons');
         this.feedbackThanks = document.getElementById('feedback-thanks');
+
+        // Comment feedback modal elements
+        this.feedbackTextarea = document.getElementById('feedback-textarea');
+        this.feedbackSubmitBtn = document.getElementById('feedback-submit');
+        this.commentFeedbackThanks = document.getElementById('comment-feedback-thanks');
 
         // Purchase modal elements
         this.purchaseMessage = document.getElementById('purchase-message');
@@ -829,6 +835,81 @@ class Game {
         }
     }
 
+    // Get device type for feedback
+    getDeviceType() {
+        // Check screen width first (more reliable than UA)
+        if (window.innerWidth <= 768) {
+            return 'mobile';
+        }
+        // Fallback to user agent for tablets in desktop mode
+        const ua = navigator.userAgent.toLowerCase();
+        if (/mobile|android|iphone|ipad|ipod/.test(ua)) {
+            return 'mobile';
+        }
+        return 'desktop';
+    }
+
+    // Show comment feedback modal
+    showCommentFeedbackModal() {
+        // Reset modal state
+        this.feedbackTextarea.value = '';
+        this.feedbackSubmitBtn.disabled = true;
+        this.commentFeedbackThanks.style.display = 'none';
+        this.feedbackTextarea.style.display = 'block';
+        this.feedbackSubmitBtn.style.display = 'block';
+
+        this.showOverlay('commentFeedback');
+    }
+
+    // Close comment feedback modal
+    closeCommentFeedbackModal() {
+        this.hideOverlay('commentFeedback');
+    }
+
+    // Submit comment feedback
+    async submitCommentFeedback() {
+        const comment = this.feedbackTextarea.value.trim();
+        if (!comment) return;
+
+        // Hide form, show thanks
+        this.feedbackTextarea.style.display = 'none';
+        this.feedbackSubmitBtn.style.display = 'none';
+        this.commentFeedbackThanks.style.display = 'block';
+
+        // Get highest pig tier from current game
+        const highestValue = this.getHighestPig();
+        const pig = getPig(highestValue);
+        const highestTier = pig.tier;
+
+        // Detect device type
+        const deviceType = this.getDeviceType();
+
+        // Send to Supabase
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/player_feedback_comments`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({
+                    comment_text: comment,
+                    highest_pig_reached: highestTier,
+                    device_type: deviceType
+                })
+            });
+        } catch (e) {
+            console.warn('Could not submit comment feedback:', e);
+        }
+
+        // Auto-close after 1 second
+        setTimeout(() => {
+            this.closeCommentFeedbackModal();
+        }, 1000);
+    }
+
     // Show win screen
     showWinScreen() {
         this.showScreen('win');
@@ -1203,6 +1284,23 @@ class Game {
 
         document.getElementById('feedback-down').addEventListener('click', () => {
             this.submitFeedback('down');
+        });
+
+        // Comment feedback modal
+        document.getElementById('feedback-link').addEventListener('click', () => {
+            this.showCommentFeedbackModal();
+        });
+
+        document.getElementById('comment-feedback-close').addEventListener('click', () => {
+            this.closeCommentFeedbackModal();
+        });
+
+        document.getElementById('feedback-textarea').addEventListener('input', (e) => {
+            this.feedbackSubmitBtn.disabled = e.target.value.trim().length === 0;
+        });
+
+        document.getElementById('feedback-submit').addEventListener('click', () => {
+            this.submitCommentFeedback();
         });
 
         // Win screen buttons

@@ -68,6 +68,7 @@
         </div>
 
         <p class="instructions">Swipe or use arrow keys to move tiles</p>
+        <a class="feedback-link" id="feedback-link">Give Feedback</a>
     </div>
 
     <!-- PAUSE MENU (overlay) -->
@@ -112,6 +113,21 @@
                 <button class="feedback-btn" id="feedback-down" data-rating="down">👎</button>
             </div>
             <div class="feedback-thanks" id="feedback-thanks" style="display: none;">Thanks!</div>
+        </div>
+    </div>
+
+    <!-- COMMENT FEEDBACK MODAL -->
+    <div class="overlay" id="comment-feedback-overlay">
+        <div class="modal feedback-modal">
+            <button class="feedback-close" id="comment-feedback-close">&times;</button>
+            <h2>What did you think of the game?</h2>
+            <textarea
+                class="feedback-textarea"
+                id="feedback-textarea"
+                maxlength="3000"
+            ></textarea>
+            <button class="btn btn-primary feedback-submit" id="feedback-submit" disabled>Submit</button>
+            <div class="feedback-thanks" id="comment-feedback-thanks" style="display: none;">Thanks!</div>
         </div>
     </div>
 

@@ -441,6 +441,19 @@ body {
     text-align: center;
 }
 
+.feedback-link {
+    color: #8a9a82;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    cursor: pointer;
+    transition: color 0.2s;
+    margin-top: 5px;
+}
+
+.feedback-link:hover {
+    color: #5a6f52;
+}
+
 /* ========== OVERLAYS & MODALS ========== */
 .overlay {
     position: fixed;
@@ -599,6 +612,41 @@ body {
     color: #5a6f52;
     padding: 20px 0;
     animation: fadeInScale 0.3s ease-out;
+}
+
+.feedback-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: 1rem;
+    border: 2px solid rgba(90, 111, 82, 0.3);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.8);
+    color: #5a6f52;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.feedback-textarea:focus {
+    border-color: #85b87a;
+    box-shadow: 0 2px 8px rgba(133, 184, 122, 0.25);
+}
+
+.feedback-submit {
+    width: 100%;
+}
+
+.feedback-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.feedback-submit:disabled:hover {
+    transform: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 /* ========== GAME OVER SCREEN ========== */
