@@ -278,6 +278,10 @@ class Game {
         this.updateHighScoreDisplay();
         this.updateLivesDisplay();
         this.updateSoundButton();
+
+        // Set up language toggle and update all text
+        this.setupLanguageToggles();
+        this.updateAllText();
     }
 
     // Cache all DOM elements
@@ -530,6 +534,10 @@ class Game {
     // Render a single tile
     renderTile(tile) {
         const pig = getPig(tile.value);
+        const strings = getStrings();
+        // Get localized pig name
+        const localizedName = strings.pigs[pig.tier] || pig.name;
+
         const element = document.createElement('div');
         element.className = `tile tile-${tile.value}`;
 
@@ -548,12 +556,12 @@ class Game {
         const imgEl = document.createElement('img');
         imgEl.className = 'tile-image';
         imgEl.src = pig.image;
-        imgEl.alt = pig.name;
+        imgEl.alt = localizedName;
         imgEl.draggable = false;
 
         const nameEl = document.createElement('div');
         nameEl.className = 'tile-name';
-        nameEl.textContent = pig.name;
+        nameEl.textContent = localizedName;
 
         element.appendChild(imgEl);
         element.appendChild(nameEl);
@@ -790,8 +798,11 @@ class Game {
 
         const highestValue = this.getHighestPig();
         const pig = getPig(highestValue);
+        const strings = getStrings();
+        // Get localized pig name
+        const localizedName = strings.pigs[pig.tier] || pig.name;
 
-        this.highestPigBadge.textContent = pig.name;
+        this.highestPigBadge.textContent = localizedName;
         this.highestPigBadge.style.backgroundColor = pig.color || '';
         if (highestValue === 131072) {
             this.highestPigBadge.style.background = 'linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6)';
@@ -959,22 +970,25 @@ class Game {
                 }
             }
 
+            const strings = getStrings();
             if (isUnlocked) {
+                // Get localized pig name
+                const localizedName = strings.pigs[pig.tier] || pig.name;
                 badge.innerHTML = `
-                    <img class="badge-image" src="${pig.image}" alt="${pig.name}" draggable="false">
-                    <div class="badge-name">${pig.name}</div>
+                    <img class="badge-image" src="${pig.image}" alt="${localizedName}" draggable="false">
+                    <div class="badge-name">${localizedName}</div>
                 `;
             } else {
                 badge.innerHTML = `
-                    <div class="badge-icon">${STRINGS.collection.lockedIcon}</div>
-                    <div class="badge-name">${STRINGS.collection.lockedName}</div>
+                    <div class="badge-icon">${strings.collection.lockedIcon}</div>
+                    <div class="badge-name">${strings.collection.lockedName}</div>
                 `;
             }
 
             this.badgeGrid.appendChild(badge);
         });
 
-        this.collectionProgress.textContent = STRINGS.collection.progress(this.unlockedPigs.size);
+        this.collectionProgress.textContent = getStrings().collection.progress(this.unlockedPigs.size);
     }
 
     // Toggle sound
@@ -988,7 +1002,67 @@ class Game {
 
     // Update sound button display
     updateSoundButton() {
-        this.soundButton.textContent = this.soundEnabled ? STRINGS.game.soundOn : STRINGS.game.soundOff;
+        this.soundButton.textContent = this.soundEnabled ? getStrings().game.soundOn : getStrings().game.soundOff;
+    }
+
+    // ========== LANGUAGE MANAGEMENT ==========
+
+    // Set up language toggle button event listeners
+    setupLanguageToggles() {
+        document.querySelectorAll('.lang-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                toggleLanguage();
+                this.updateAllText();
+            });
+        });
+    }
+
+    // Update all language toggle buttons to show current language
+    updateLanguageToggles() {
+        const lang = getCurrentLanguage().toUpperCase();
+        document.querySelectorAll('.lang-toggle').forEach(btn => {
+            btn.textContent = lang;
+        });
+    }
+
+    // Get a nested string value from the strings object using a dot-notation key
+    getNestedString(obj, key) {
+        return key.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : null, obj);
+    }
+
+    // Update all translatable text in the UI
+    updateAllText() {
+        const strings = getStrings();
+
+        // Update all elements with data-i18n attribute
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            const value = this.getNestedString(strings, key);
+            if (value && typeof value === 'string') {
+                el.textContent = value;
+            }
+        });
+
+        // Update all elements with data-i18n-placeholder attribute (for inputs)
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            const value = this.getNestedString(strings, key);
+            if (value && typeof value === 'string') {
+                el.placeholder = value;
+            }
+        });
+
+        // Update dynamic elements
+        this.updateSoundButton();
+        this.updateLanguageToggles();
+
+        // Re-render based on current screen
+        if (this.currentScreen === 'collection') {
+            this.renderCollection();
+        } else if (this.currentScreen === 'game') {
+            // Re-render tiles with localized names
+            this.render();
+        }
     }
 
     // ========== PERSISTENCE (LOCAL STORAGE) ==========
@@ -1138,7 +1212,7 @@ class Game {
     // Update the countdown display
     updateCountdownDisplay() {
         if (this.lives >= MAX_LIVES || !this.lastLifeLostTime) {
-            this.nextLifeCountdown.textContent = STRINGS.outOfLives.timerComplete;
+            this.nextLifeCountdown.textContent = getStrings().outOfLives.timerComplete;
             return;
         }
 
@@ -1166,7 +1240,7 @@ class Game {
         // In a real app, this would trigger payment flow
         // For now, show a styled modal and add the lives
         this.pendingPurchaseCount = count;
-        this.purchaseMessage.textContent = STRINGS.purchase.message(count);
+        this.purchaseMessage.textContent = getStrings().purchase.message(count);
         this.showOverlay('purchase');
     }
 
@@ -1421,6 +1495,35 @@ function setAuthenticated() {
     }
 }
 
+// Update all text on the gate screen (standalone version for before Game is initialized)
+function updateGateText() {
+    const strings = getStrings();
+
+    // Update all elements with data-i18n attribute on gate screen
+    document.querySelectorAll('#gate-screen [data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const value = key.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : null, strings);
+        if (value && typeof value === 'string') {
+            el.textContent = value;
+        }
+    });
+
+    // Update placeholder
+    document.querySelectorAll('#gate-screen [data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        const value = key.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : null, strings);
+        if (value && typeof value === 'string') {
+            el.placeholder = value;
+        }
+    });
+
+    // Update language toggle button
+    const lang = getCurrentLanguage().toUpperCase();
+    document.querySelectorAll('#gate-screen .lang-toggle').forEach(btn => {
+        btn.textContent = lang;
+    });
+}
+
 function setupGate() {
     const gateScreen = document.getElementById('gate-screen');
     const gateForm = document.getElementById('gate-form');
@@ -1429,6 +1532,17 @@ function setupGate() {
 
     // Show gate screen
     gateScreen.classList.add('active');
+
+    // Set up language toggle for gate screen
+    document.querySelectorAll('#gate-screen .lang-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            toggleLanguage();
+            updateGateText();
+        });
+    });
+
+    // Update text based on current language
+    updateGateText();
 
     // Focus password input
     gatePassword.focus();
@@ -1447,7 +1561,7 @@ function setupGate() {
             new Game();
         } else {
             // Wrong password
-            gateError.textContent = STRINGS.gate.error;
+            gateError.textContent = getStrings().gate.error;
             gatePassword.value = '';
             gatePassword.focus();
         }

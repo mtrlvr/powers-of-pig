@@ -19,6 +19,7 @@ src/
   index.html         # Main HTML with all screens (home, game, pause, collection, etc.)
   styles.css         # All styling (responsive, tile colors, animations)
   game.js            # Core game engine (Game class, state management, rendering)
+  strings.js         # Centralized UI strings with EN/FR translations
   assets/
     pigs/            # 17 pig images (1.pip.png through 17.thelionpig.png)
 ```
@@ -34,6 +35,7 @@ src/
 - **Haptics** - Vibration API patterns synced with sounds on supported devices
 - **Persistence** - localStorage for game state, unlocked badges, lives, high score
 - **Password gate** - Simple auth screen before game loads, password stored in localStorage
+- **Localisation** - English/French language toggle on all screens, persisted to localStorage
 
 ## Development Philosophy
 
@@ -68,6 +70,25 @@ Two feedback mechanisms exist:
 
 Supabase config (URL and anon key) is at the top of game.js.
 
+### Localisation System
+The game supports English and French with a language toggle visible on all screens.
+
+**Key files:**
+- `strings.js` - Contains `STRINGS` object with `en` and `fr` keys, plus helper functions (`getCurrentLanguage()`, `setLanguage()`, `getStrings()`, `toggleLanguage()`)
+- HTML elements use `data-i18n` attributes for text content and `data-i18n-placeholder` for input placeholders
+
+**How it works:**
+- Language preference stored in localStorage under `powersofpig-language`
+- On first load, detects browser locale (defaults to French if `fr*`, otherwise English)
+- `getStrings()` returns the current language's string object
+- `updateAllText()` method in Game class refreshes all UI text when language changes
+- Pig names are localized via `strings.pigs[tier]` lookup
+
+**Adding new strings:**
+1. Add the string to both `STRINGS.en` and `STRINGS.fr` in strings.js
+2. Add `data-i18n="section.key"` attribute to the HTML element
+3. For dynamic text, call `getStrings().section.key` directly in JavaScript
+
 ## Build Phases (All Complete)
 
 1. **Core Game Engine** - 4x4 grid, tile spawning, merge logic, win/lose detection
@@ -82,3 +103,4 @@ Supabase config (URL and anon key) is at the top of game.js.
 10. **Password Gate** - Simple password screen before game loads
 11. **Feedback System** - Thumbs up/down rating on game over, stored in Supabase
 12. **In-Game Feedback** - "Give Feedback" link for qualitative text comments during gameplay
+13. **Localisation** - English/French language toggle with browser locale detection and localStorage persistence
