@@ -136,7 +136,7 @@ const STRINGS = {
 
         // Home Screen
         home: {
-            title: 'Groin',
+            title: 'Gruik',
             play: 'Jouer',
             collection: 'Collection',
             highScore: 'Meilleur score :'
