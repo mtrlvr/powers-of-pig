@@ -43,17 +43,22 @@ const LIFE_REGEN_TIME = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
 const STORAGE_KEY = 'powersOfPig';
 const AUTH_KEY = 'powersOfPigAuth';
 
-// ========== SOUND SYSTEM (Preloaded MP3 files) ==========
+// ========== SOUND SYSTEM (Web Audio API for iOS compatibility) ==========
 class SoundSystem {
     constructor() {
         this.enabled = true;
-        this.sounds = {};  // Cache for preloaded Audio elements
+        this.audioContext = null;
+        this.buffers = {};  // Cache for decoded AudioBuffers
         this.loaded = false;
     }
 
-    // Preload all 17 oink sounds
-    init() {
+    // Initialize AudioContext and preload all 17 oink sounds
+    // Must be called from a user gesture handler (e.g., Play button click)
+    async init() {
         if (this.loaded) return;
+
+        // Create AudioContext - must be in user gesture handler for iOS
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
         // Oink sound file mapping: tier -> filename
         const oinkFiles = {
@@ -76,12 +81,15 @@ class SoundSystem {
             17: 'oink-17-thelionpig.mp3'
         };
 
-        // Preload all sounds
+        // Preload all sounds as AudioBuffers
         for (const [tier, filename] of Object.entries(oinkFiles)) {
-            const audio = new Audio(`assets/sounds/${filename}`);
-            audio.preload = 'auto';
-            // Clone audio for overlapping plays
-            this.sounds[tier] = audio;
+            try {
+                const response = await fetch(`assets/sounds/${filename}`);
+                const arrayBuffer = await response.arrayBuffer();
+                this.buffers[tier] = await this.audioContext.decodeAudioData(arrayBuffer);
+            } catch (e) {
+                // Fail silently - sound just won't play for this tier
+            }
         }
 
         this.loaded = true;
@@ -89,32 +97,43 @@ class SoundSystem {
 
     // Play an oink sound for a specific pig tier (1-17)
     playOink(tier) {
-        if (!this.enabled || !this.sounds[tier]) return;
+        if (!this.enabled || !this.audioContext || !this.buffers[tier]) return;
+
+        // Resume context if suspended (iOS suspends when app goes to background)
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
 
         try {
-            // Reuse audio element (cloneNode doesn't work reliably on mobile)
-            const sound = this.sounds[tier];
-            sound.currentTime = 0;
-            sound.volume = 0.7;
-            sound.play().catch(() => {
-                // Autoplay might be blocked - fail silently
-            });
+            const source = this.audioContext.createBufferSource();
+            const gainNode = this.audioContext.createGain();
+            source.buffer = this.buffers[tier];
+            gainNode.gain.value = 0.7;
+            source.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            source.start(0);
         } catch (e) {
-            // Audio playback failed - fail silently
+            // Fail silently
         }
     }
 
     // Play a soft pop sound for spawning new tiles (use tier 1 sound quietly)
     playSpawn() {
-        if (!this.enabled || !this.sounds[1]) return;
+        if (!this.enabled || !this.audioContext || !this.buffers[1]) return;
+
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
 
         try {
-            // Reuse audio element (cloneNode doesn't work reliably on mobile)
-            const sound = this.sounds[1];
-            sound.currentTime = 0;
-            sound.volume = 0.2;
-            sound.playbackRate = 1.5;  // Play faster for a "pop" feel
-            sound.play().catch(() => {});
+            const source = this.audioContext.createBufferSource();
+            const gainNode = this.audioContext.createGain();
+            source.buffer = this.buffers[1];
+            source.playbackRate.value = 1.5;  // Play faster for a "pop" feel
+            gainNode.gain.value = 0.2;
+            source.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            source.start(0);
         } catch (e) {
             // Fail silently
         }

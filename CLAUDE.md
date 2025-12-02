@@ -49,8 +49,8 @@ Tiles use **CSS Grid placement** (`grid-column` and `grid-row`) - NOT JavaScript
 
 **Important lesson learned:** Don't overcomplicate tile positioning with JS measurements (`getBoundingClientRect`, `getComputedStyle`, etc.). CSS Grid handles responsive layouts natively - just place tiles in grid cells and let CSS do the work.
 
-### Sound System (Mobile)
-Audio uses `currentTime = 0` reset instead of `cloneNode()` - mobile browsers don't reliably clone audio elements.
+### Sound System (Web Audio API)
+Sound uses the **Web Audio API** (`AudioContext` + `AudioBuffer`) instead of `HTMLAudioElement` for iOS compatibility. iOS requires audio to be unlocked during a user gesture - the `AudioContext` is created when the user taps the Play button, which properly unlocks it. Sounds are preloaded as `AudioBuffer` objects and played via `BufferSourceNode`. The `audioContext.resume()` call handles iOS suspending audio when the app goes to background.
 
 ### PIGS Constant
 Each tier defined with: `{ tier, name, color, icon, image }` - image paths point to `assets/pigs/` folder.
