@@ -966,15 +966,15 @@ class Game {
                 `;
             } else {
                 badge.innerHTML = `
-                    <div class="badge-icon">?</div>
-                    <div class="badge-name">???</div>
+                    <div class="badge-icon">${STRINGS.collection.lockedIcon}</div>
+                    <div class="badge-name">${STRINGS.collection.lockedName}</div>
                 `;
             }
 
             this.badgeGrid.appendChild(badge);
         });
 
-        this.collectionProgress.textContent = `${this.unlockedPigs.size}/17`;
+        this.collectionProgress.textContent = STRINGS.collection.progress(this.unlockedPigs.size);
     }
 
     // Toggle sound
@@ -988,7 +988,7 @@ class Game {
 
     // Update sound button display
     updateSoundButton() {
-        this.soundButton.textContent = this.soundEnabled ? '🔊' : '🔇';
+        this.soundButton.textContent = this.soundEnabled ? STRINGS.game.soundOn : STRINGS.game.soundOff;
     }
 
     // ========== PERSISTENCE (LOCAL STORAGE) ==========
@@ -1138,7 +1138,7 @@ class Game {
     // Update the countdown display
     updateCountdownDisplay() {
         if (this.lives >= MAX_LIVES || !this.lastLifeLostTime) {
-            this.nextLifeCountdown.textContent = '--:--:--';
+            this.nextLifeCountdown.textContent = STRINGS.outOfLives.timerComplete;
             return;
         }
 
@@ -1166,7 +1166,7 @@ class Game {
         // In a real app, this would trigger payment flow
         // For now, show a styled modal and add the lives
         this.pendingPurchaseCount = count;
-        this.purchaseMessage.textContent = `You would purchase ${count} life${count > 1 ? 's' : ''} here!`;
+        this.purchaseMessage.textContent = STRINGS.purchase.message(count);
         this.showOverlay('purchase');
     }
 
@@ -1447,7 +1447,7 @@ function setupGate() {
             new Game();
         } else {
             // Wrong password
-            gateError.textContent = 'Wrong snort, try again.';
+            gateError.textContent = STRINGS.gate.error;
             gatePassword.value = '';
             gatePassword.focus();
         }
