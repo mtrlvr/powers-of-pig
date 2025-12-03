@@ -30,6 +30,28 @@ const PIGS = {
 // Get all pig values in order
 const PIG_VALUES = Object.keys(PIGS).map(Number).sort((a, b) => a - b);
 
+// ========== ANALYTICS (PostHog) ==========
+const MILESTONES_KEY = 'pop_milestones_reached';
+
+const Analytics = {
+    track(eventName, properties = {}) {
+        if (typeof posthog !== 'undefined' && posthog.capture) {
+            try { posthog.capture(eventName, properties); } catch (e) {}
+        }
+    },
+    hasMilestone(tier) {
+        try {
+            return JSON.parse(localStorage.getItem(MILESTONES_KEY) || '[]').includes(tier);
+        } catch (e) { return false; }
+    },
+    setMilestone(tier) {
+        try {
+            const m = JSON.parse(localStorage.getItem(MILESTONES_KEY) || '[]');
+            if (!m.includes(tier)) { m.push(tier); localStorage.setItem(MILESTONES_KEY, JSON.stringify(m)); }
+        } catch (e) {}
+    }
+};
+
 // Get pig info by value
 function getPig(value) {
     return PIGS[value] || { tier: 0, name: '?', color: '#ccc' };
@@ -241,6 +263,11 @@ class Game {
         this.soundEnabled = true;
         this.previousState = null; // For undo
 
+        // Analytics state
+        this.gameStartTime = null;
+        this.moveCount = 0;
+        this.highestTierThisSession = 0;
+
         // Lives system
         this.lives = MAX_LIVES;
         this.lastLifeLostTime = null; // Timestamp when a life was last lost (for regen)
@@ -405,6 +432,13 @@ class Game {
         this.won = false;
         this.keepPlaying = false;
         this.previousState = null;
+
+        // Reset analytics tracking for new game
+        this.gameStartTime = Date.now();
+        this.moveCount = 0;
+
+        // Track game start
+        Analytics.track('game_start', { lives_remaining: this.lives });
 
         this.tileContainer.innerHTML = '';
         this.createBackgroundCells();
@@ -630,6 +664,9 @@ class Game {
         }
 
         if (moved) {
+            // Increment move counter for analytics
+            this.moveCount++;
+
             // Play sound/haptic for highest tier merge only (if any merges occurred)
             if (highestMergeTier > 0) {
                 soundSystem.playOink(highestMergeTier);
@@ -711,6 +748,33 @@ class Game {
 
                 // Return the tier of the merged pig (sound/haptic handled in move())
                 const pig = getPig(newValue);
+                const fromPig = getPig(tile.value);
+                const strings = getStrings();
+                const localizedPigName = strings.pigs[pig.tier] || pig.name;
+
+                // Analytics: track merge (tier 6+ only to reduce volume)
+                if (pig.tier >= 6) {
+                    Analytics.track('merge', {
+                        from_tier: fromPig.tier,
+                        to_tier: pig.tier,
+                        to_pig_name: localizedPigName
+                    });
+                }
+
+                // Analytics: track milestone if this is a new tier reached
+                if (!Analytics.hasMilestone(pig.tier)) {
+                    Analytics.setMilestone(pig.tier);
+                    Analytics.track('milestone_reached', {
+                        tier: pig.tier,
+                        pig_name: localizedPigName
+                    });
+                }
+
+                // Update session highest tier
+                if (pig.tier > this.highestTierThisSession) {
+                    this.highestTierThisSession = pig.tier;
+                }
+
                 return { moved: true, mergeTier: pig.tier };
             } else {
                 tile.row = newRow;
@@ -787,12 +851,6 @@ class Game {
 
     // Show game over screen
     showGameOverScreen() {
-        // Lose a life on game over
-        this.loseLife();
-
-        // Sad haptic feedback
-        hapticsSystem.vibrateGameOver();
-
         // Prepare game over screen data
         this.finalScoreElement.textContent = this.score;
 
@@ -801,6 +859,26 @@ class Game {
         const strings = getStrings();
         // Get localized pig name
         const localizedName = strings.pigs[pig.tier] || pig.name;
+
+        // Calculate game duration
+        const durationSeconds = this.gameStartTime
+            ? Math.floor((Date.now() - this.gameStartTime) / 1000)
+            : 0;
+
+        // Track game over analytics
+        Analytics.track('game_over', {
+            highest_tier: pig.tier,
+            highest_pig_name: localizedName,
+            score: this.score,
+            moves: this.moveCount,
+            duration_seconds: durationSeconds
+        });
+
+        // Lose a life on game over
+        this.loseLife('game_over');
+
+        // Sad haptic feedback
+        hapticsSystem.vibrateGameOver();
 
         this.highestPigBadge.textContent = localizedName;
         this.highestPigBadge.style.backgroundColor = pig.color || '';
@@ -1138,9 +1216,16 @@ class Game {
     }
 
     // Lose a life
-    loseLife() {
+    loseLife(reason = 'game_over') {
         if (this.lives > 0) {
             this.lives--;
+
+            // Track life lost analytics
+            Analytics.track('life_lost', {
+                reason: reason,
+                lives_remaining: this.lives
+            });
+
             // Start regen timer if we just lost a life and aren't at max
             if (this.lives < MAX_LIVES && !this.lastLifeLostTime) {
                 this.lastLifeLostTime = Date.now();
@@ -1262,6 +1347,11 @@ class Game {
 
     // Show out of lives screen
     showNoLivesScreen() {
+        // Track lives exhausted analytics
+        Analytics.track('lives_exhausted', {
+            highest_tier_this_session: this.highestTierThisSession
+        });
+
         // Start regeneration timer if not already running
         if (!this.lastLifeLostTime) {
             this.lastLifeLostTime = Date.now();
@@ -1326,7 +1416,7 @@ class Game {
         document.getElementById('restart-confirm').addEventListener('click', () => {
             this.hideOverlay('restart');
             // Restart costs a life
-            this.loseLife();
+            this.loseLife('restart');
             if (this.lives > 0) {
                 this.startGame();
             } else {

@@ -70,6 +70,27 @@ Two feedback mechanisms exist:
 
 Supabase config (URL and anon key) is at the top of game.js.
 
+### Analytics System (PostHog)
+PostHog is integrated for player behaviour tracking during soft launch. The SDK is loaded in `index.html` head.
+
+**Events tracked:**
+| Event | When Triggered | Key Payload |
+|-------|----------------|-------------|
+| `session_start` | Page load | Auto-captured by PostHog |
+| `game_start` | New game begins | `lives_remaining` |
+| `merge` | Tier 6+ merges | `from_tier`, `to_tier`, `to_pig_name` |
+| `milestone_reached` | First time reaching a tier (ever) | `tier`, `pig_name` |
+| `game_over` | No valid moves | `highest_tier`, `score`, `moves`, `duration_seconds` |
+| `life_lost` | Life consumed | `reason` ('game_over' or 'restart'), `lives_remaining` |
+| `lives_exhausted` | Player hits 0 lives | `highest_tier_this_session` |
+
+**Implementation details:**
+- `Analytics` helper object in game.js handles all tracking with fire-and-forget pattern
+- Milestones persist in localStorage (`pop_milestones_reached`) to prevent duplicate events across sessions
+- Merge events filtered to tier 6+ to reduce volume
+- Session replay enabled with password field masked
+- PostHog config: `phc_hX8ezASA5I3IAhaSnH0XlcU4ePBW22CvdytKIAUyOtu` on `us.posthog.com`
+
 ### Localisation System
 The game supports English and French with a language toggle visible on all screens.
 
@@ -104,3 +125,4 @@ The game supports English and French with a language toggle visible on all scree
 11. **Feedback System** - Thumbs up/down rating on game over, stored in Supabase
 12. **In-Game Feedback** - "Give Feedback" link for qualitative text comments during gameplay
 13. **Localisation** - English/French language toggle with browser locale detection and localStorage persistence
+14. **Analytics** - PostHog integration for player behaviour tracking during soft launch
