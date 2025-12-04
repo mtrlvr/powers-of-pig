@@ -30,11 +30,9 @@ src/
 - **Game class** in game.js handles all game state, logic, and rendering
 - **Grid-based rendering** - CSS Grid for both background cells AND tile positioning (no JS pixel math)
 - **Touch + keyboard input** - swipe detection (with threshold) and arrow keys
-- **Lives system** - 3 lives max, 4-hour regeneration timer, persisted to localStorage
 - **Sound system** - Preloaded MP3 files with 17 unique oink sounds per tier
 - **Haptics** - Vibration API patterns synced with sounds on supported devices
-- **Persistence** - localStorage for game state, unlocked badges, lives, high score
-- **Password gate** - Simple auth screen before game loads, password stored in localStorage
+- **Persistence** - localStorage for game state, unlocked badges, high score
 - **Localisation** - English/French language toggle on all screens, persisted to localStorage
 
 ## Development Philosophy
@@ -58,17 +56,34 @@ Sound uses the **Web Audio API** (`AudioContext` + `AudioBuffer`) instead of `HT
 Each tier defined with: `{ tier, name, color, icon, image }` - image paths point to `assets/pigs/` folder.
 
 ### Screens
-- Gate (password entry), Home, Game, Pause (overlay), Game Over, Win, Collection (badge gallery), Out of Lives
-
-### Password Gate
-The gate screen appears first on load. Password is "cochon" (case-insensitive). Authentication is stored in localStorage (`powersOfPigAuth`). Returning users skip the gate automatically. The gate logic lives at the bottom of game.js with `setupGate()`, `checkAuthentication()`, and `setAuthenticated()` functions.
+- Home, Game, Pause (overlay), Game Over, Win, Collection (badge gallery), Feedback (overlay)
 
 ### Feedback System
-Two feedback mechanisms exist:
-1. **Thumbs up/down modal** - Appears on game over before the game over screen. Players rate with 👍/👎, data sent to Supabase `feedback` table. Can be skipped with X button.
-2. **In-game comment feedback** - "Give Feedback" link below the game board opens a modal for qualitative text feedback (500 word limit). Captures comment, highest pig tier reached, and device type. Data sent to Supabase `player_feedback_comments` table.
+A two-question feedback modal appears on game over (before the game over screen) and can also be triggered via the "Give Feedback" link during gameplay.
 
-Supabase config (URL and anon key) is at the top of game.js.
+**Questions:**
+1. "Who would you send this to?" — free text input, optional
+2. "What would make it better?" — free text input, optional
+
+**Buttons:**
+- "Submit" — sends data to Supabase, then proceeds
+- "Maybe later" — skips feedback
+
+**Context-aware behaviour:**
+- `context: 'gameOver'` — after submit/skip, shows game over screen
+- `context: 'inGame'` — after submit/skip, closes modal and returns to game
+
+**Data captured:**
+- `send_to_text` — answer to question 1
+- `improvement_text` — answer to question 2
+- `highest_pig_reached` — tier number (1-17)
+- `score` — final score
+- `moves` — total moves made
+- `duration_seconds` — game duration
+- `device_type` — 'mobile' or 'desktop'
+- `submitted_at` — timestamp
+
+Data sent to Supabase `player_feedback_comments` table. Supabase config (URL and anon key) is at the top of game.js.
 
 ### Analytics System (PostHog)
 PostHog is integrated for player behaviour tracking during soft launch. The SDK is loaded in `index.html` head.
@@ -77,18 +92,26 @@ PostHog is integrated for player behaviour tracking during soft launch. The SDK 
 | Event | When Triggered | Key Payload |
 |-------|----------------|-------------|
 | `session_start` | Page load | Auto-captured by PostHog |
-| `game_start` | New game begins | `lives_remaining` |
+| `game_start` | New game begins | — |
 | `merge` | Tier 6+ merges | `from_tier`, `to_tier`, `to_pig_name` |
 | `milestone_reached` | First time reaching a tier (ever) | `tier`, `pig_name` |
 | `game_over` | No valid moves | `highest_tier`, `score`, `moves`, `duration_seconds` |
-| `life_lost` | Life consumed | `reason` ('game_over' or 'restart'), `lives_remaining` |
-| `lives_exhausted` | Player hits 0 lives | `highest_tier_this_session` |
+| `feedback_shown` | Feedback modal appears | `context` ('gameOver' or 'inGame') |
+| `feedback_submitted` | User submits feedback | `context`, `has_send_to`, `has_improvement` |
+| `feedback_skipped` | User clicks "Maybe later" | `context` |
+
+**User journey:**
+```
+session_start → game_start → [merges, milestones] → game_over
+    → feedback_shown(gameOver) → feedback_submitted OR feedback_skipped
+    → game_start (new game) → ...
+```
 
 **Implementation details:**
 - `Analytics` helper object in game.js handles all tracking with fire-and-forget pattern
 - Milestones persist in localStorage (`pop_milestones_reached`) to prevent duplicate events across sessions
 - Merge events filtered to tier 6+ to reduce volume
-- Session replay enabled with password field masked
+- Session replay enabled
 - PostHog config: `phc_hX8ezASA5I3IAhaSnH0XlcU4ePBW22CvdytKIAUyOtu` on `us.posthog.com`
 
 ### Localisation System
@@ -115,14 +138,12 @@ The game supports English and French with a language toggle visible on all scree
 1. **Core Game Engine** - 4x4 grid, tile spawning, merge logic, win/lose detection
 2. **Pig Identity** - 17 pig tiers with names, colors, icons replacing numbers
 3. **Screens & Navigation** - All game screens with transitions
-4. **Lives System** - 3 lives, 4-hour regen timer, purchase placeholders
-5. **Persistence** - localStorage for state, badges, lives, high score
-6. **Animations** - Smooth sliding, merge pop, spawn effects via CSS
-7. **Sound** - 17 unique oink sounds using Web Audio API oscillators
-8. **Haptics** - Vibration patterns on move, merge, win, game over
-9. **Visual Polish** - Custom pig images, tile alignment fixes, responsive design
-10. **Password Gate** - Simple password screen before game loads
-11. **Feedback System** - Thumbs up/down rating on game over, stored in Supabase
-12. **In-Game Feedback** - "Give Feedback" link for qualitative text comments during gameplay
-13. **Localisation** - English/French language toggle with browser locale detection and localStorage persistence
-14. **Analytics** - PostHog integration for player behaviour tracking during soft launch
+4. **Persistence** - localStorage for state, badges, high score
+5. **Animations** - Smooth sliding, merge pop, spawn effects via CSS
+6. **Sound** - 17 unique oink sounds using Web Audio API oscillators
+7. **Haptics** - Vibration patterns on move, merge, win, game over
+8. **Visual Polish** - Custom pig images, tile alignment fixes, responsive design
+9. **Feedback System** - Two-question feedback modal on game over and in-game, stored in Supabase
+10. **Localisation** - English/French language toggle with browser locale detection and localStorage persistence
+11. **Analytics** - PostHog integration for player behaviour tracking
+12. **Reddit Launch Prep** - Removed password gate and lives system, streamlined feedback flow

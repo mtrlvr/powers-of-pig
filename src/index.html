@@ -17,44 +17,16 @@
             capture_pageleave: true,
             autocapture: false,
             session_recording: {
-                maskAllInputs: true,
-                maskTextSelector: '#gate-password'
+                maskAllInputs: true
             }
         });
     </script>
 </head>
 <body>
-    <!-- PASSWORD GATE SCREEN -->
-    <div class="screen gate-screen" id="gate-screen">
-        <button class="lang-toggle" aria-label="Toggle language">EN</button>
-        <div class="gate-pig">🐷</div>
-        <h1 class="gate-title" data-i18n="gate.title">Enter the Sty</h1>
-        <form class="gate-form" id="gate-form">
-            <input
-                type="password"
-                class="gate-input"
-                id="gate-password"
-                data-i18n-placeholder="gate.placeholder"
-                placeholder="Password"
-                autocomplete="off"
-                autocapitalize="off"
-                autocorrect="off"
-                spellcheck="false"
-            >
-            <button type="submit" class="btn btn-primary gate-btn" data-i18n="gate.button">Enter</button>
-        </form>
-        <p class="gate-error" id="gate-error"></p>
-    </div>
-
     <!-- HOME SCREEN -->
     <div class="screen home-screen" id="home-screen">
         <button class="lang-toggle" aria-label="Toggle language">EN</button>
         <h1 class="home-title" data-i18n="home.title">Powers of Pig</h1>
-        <div class="lives-display" id="home-lives">
-            <span class="life-icon">🐷</span>
-            <span class="life-icon">🐷</span>
-            <span class="life-icon">🐷</span>
-        </div>
         <div class="home-pig">🐷</div>
         <button class="btn btn-primary" id="play-button" data-i18n="home.play">Play</button>
         <button class="btn btn-secondary" id="collection-button" data-i18n="home.collection">Collection</button>
@@ -104,7 +76,6 @@
     <div class="overlay" id="restart-overlay">
         <div class="modal">
             <h2 data-i18n="restart.title">Start Over?</h2>
-            <p class="modal-text" data-i18n="restart.message">This will cost 1 life.</p>
             <div class="modal-buttons">
                 <button class="btn btn-secondary" id="restart-cancel" data-i18n="restart.cancel">Cancel</button>
                 <button class="btn btn-danger" id="restart-confirm" data-i18n="restart.confirm">Confirm</button>
@@ -112,41 +83,22 @@
         </div>
     </div>
 
-    <!-- PURCHASE CONFIRMATION MODAL -->
-    <div class="overlay" id="purchase-overlay">
-        <div class="modal">
-            <h2 data-i18n="purchase.title">Purchase Lives</h2>
-            <p class="modal-text" id="purchase-message">You would purchase 1 life here!</p>
-            <p class="modal-subtext" data-i18n="purchase.placeholder">[Placeholder - no real payment]</p>
-            <button class="btn btn-primary" id="purchase-ok" data-i18n="purchase.ok">OK</button>
-        </div>
-    </div>
-
     <!-- FEEDBACK MODAL -->
     <div class="overlay" id="feedback-overlay">
         <div class="modal feedback-modal">
-            <button class="feedback-close" id="feedback-close">&times;</button>
-            <h2 data-i18n="feedback.rateTitle">Rate your game</h2>
-            <div class="feedback-buttons" id="feedback-buttons">
-                <button class="feedback-btn" id="feedback-up" data-rating="up">👍</button>
-                <button class="feedback-btn" id="feedback-down" data-rating="down">👎</button>
+            <h2 data-i18n="feedback.title">Quick feedback</h2>
+            <div class="feedback-question">
+                <label data-i18n="feedback.question1">Who would you send this to?</label>
+                <input type="text" id="feedback-send-to" class="feedback-input" data-i18n-placeholder="feedback.placeholder1" placeholder="e.g. my brother, a friend who likes puzzle games...">
             </div>
-            <div class="feedback-thanks" id="feedback-thanks" style="display: none;" data-i18n="feedback.thanks">Thanks!</div>
-        </div>
-    </div>
-
-    <!-- COMMENT FEEDBACK MODAL -->
-    <div class="overlay" id="comment-feedback-overlay">
-        <div class="modal feedback-modal">
-            <button class="feedback-close" id="comment-feedback-close">&times;</button>
-            <h2 data-i18n="feedback.commentTitle">What did you think of the game?</h2>
-            <textarea
-                class="feedback-textarea"
-                id="feedback-textarea"
-                maxlength="3000"
-            ></textarea>
-            <button class="btn btn-primary feedback-submit" id="feedback-submit" disabled data-i18n="feedback.submit">Submit</button>
-            <div class="feedback-thanks" id="comment-feedback-thanks" style="display: none;" data-i18n="feedback.thanks">Thanks!</div>
+            <div class="feedback-question">
+                <label data-i18n="feedback.question2">What would make it better?</label>
+                <textarea id="feedback-improve" class="feedback-textarea" rows="3"></textarea>
+            </div>
+            <div class="feedback-buttons">
+                <button class="btn btn-primary" id="feedback-submit" data-i18n="feedback.submit">Submit</button>
+                <button class="btn btn-secondary" id="feedback-skip" data-i18n="feedback.skip">Maybe later</button>
+            </div>
         </div>
     </div>
 
@@ -192,28 +144,6 @@
             </div>
         </header>
         <div class="badge-grid" id="badge-grid"></div>
-    </div>
-
-    <!-- OUT OF LIVES SCREEN -->
-    <div class="screen nolives-screen" id="nolives-screen">
-        <button class="lang-toggle" aria-label="Toggle language">EN</button>
-        <h2 data-i18n="outOfLives.title">Out of Oinks!</h2>
-        <div class="nolives-pig">😢🐷</div>
-        <div class="next-life-timer">
-            <span data-i18n="outOfLives.nextLife">Next life in:</span>
-            <span id="next-life-countdown">4:00:00</span>
-        </div>
-        <div class="purchase-options">
-            <button class="btn btn-purchase" id="buy-one-life">
-                <span class="purchase-label" data-i18n="outOfLives.get1Life">Get 1 Life</span>
-                <span class="purchase-price" data-i18n="outOfLives.price1">£0.50</span>
-            </button>
-            <button class="btn btn-purchase" id="buy-three-lives" style="display: none;">
-                <span class="purchase-label" data-i18n="outOfLives.get3Lives">Get 3 Lives</span>
-                <span class="purchase-price" data-i18n="outOfLives.price3">£1.00</span>
-            </button>
-        </div>
-        <button class="btn btn-secondary" id="nolives-home-button" data-i18n="outOfLives.home">Home</button>
     </div>
 
     <script src="strings.js"></script>

@@ -4,14 +4,6 @@
 
 const STRINGS = {
     en: {
-        // Gate Screen
-        gate: {
-            title: 'Enter the Sty',
-            placeholder: 'Password',
-            button: 'Enter',
-            error: 'Wrong snort, try again.'
-        },
-
         // Home Screen
         home: {
             title: 'Powers of Pig',
@@ -40,27 +32,18 @@ const STRINGS = {
         // Restart Confirmation
         restart: {
             title: 'Start Over?',
-            message: 'This will cost 1 life.',
             cancel: 'Cancel',
             confirm: 'Confirm'
         },
 
-        // Purchase Modal
-        purchase: {
-            title: 'Purchase Lives',
-            message: (count) => `You would purchase ${count} ${count === 1 ? 'life' : 'lives'} here!`,
-            placeholder: '[Placeholder - no real payment]',
-            ok: 'OK'
-        },
-
-        // Feedback Modals
+        // Feedback Modal
         feedback: {
-            rateTitle: 'Rate your game',
-            thumbsUp: '👍',
-            thumbsDown: '👎',
-            thanks: 'Thanks!',
-            commentTitle: 'What did you think of the game?',
-            submit: 'Submit'
+            title: 'Quick feedback',
+            question1: 'Who would you send this to?',
+            placeholder1: 'e.g. my brother, a friend who likes puzzle games...',
+            question2: 'What would make it better?',
+            submit: 'Submit',
+            skip: 'Maybe later'
         },
 
         // Game Over Screen
@@ -91,18 +74,6 @@ const STRINGS = {
             lockedIcon: '?'
         },
 
-        // Out of Lives Screen
-        outOfLives: {
-            title: 'Out of Oinks!',
-            nextLife: 'Next life in:',
-            timerComplete: '--:--:--',
-            get1Life: 'Get 1 Life',
-            price1: '£0.50',
-            get3Lives: 'Get 3 Lives',
-            price3: '£1.00',
-            home: 'Home'
-        },
-
         // Pig Names (17 tiers)
         pigs: {
             1: 'Pip',
@@ -126,14 +97,6 @@ const STRINGS = {
     },
 
     fr: {
-        // Gate Screen
-        gate: {
-            title: 'Entre dans la Porcherie',
-            placeholder: 'Mot de passe',
-            button: 'Entrer',
-            error: 'Nom d\'un cochon, mauvais gruik, réessaie.'
-        },
-
         // Home Screen
         home: {
             title: 'Gruik',
@@ -162,27 +125,18 @@ const STRINGS = {
         // Restart Confirmation
         restart: {
             title: 'Recommencer ?',
-            message: 'Cela te coûtera 1 vie.',
             cancel: 'Annuler',
             confirm: 'Confirmer'
         },
 
-        // Purchase Modal
-        purchase: {
-            title: 'Acheter des vies',
-            message: (count) => `Tu achèterais ${count} ${count === 1 ? 'vie' : 'vies'} ici !`,
-            placeholder: '[Test – pas de vrai paiement]',
-            ok: 'OK'
-        },
-
-        // Feedback Modals
+        // Feedback Modal
         feedback: {
-            rateTitle: 'Note ta partie',
-            thumbsUp: '👍',
-            thumbsDown: '👎',
-            thanks: 'Merci !',
-            commentTitle: 'Qu\'as-tu pensé du jeu ?',
-            submit: 'Envoyer'
+            title: 'Un petit retour',
+            question1: 'À qui enverrais-tu ce jeu ?',
+            placeholder1: 'ex. mon frère, un ami qui aime les jeux de réflexion...',
+            question2: 'Qu\'est-ce qui le rendrait meilleur ?',
+            submit: 'Envoyer',
+            skip: 'Peut-être plus tard'
         },
 
         // Game Over Screen
@@ -211,18 +165,6 @@ const STRINGS = {
             progress: (count) => `${count}/17`,
             lockedName: '???',
             lockedIcon: '?'
-        },
-
-        // Out of Lives Screen
-        outOfLives: {
-            title: 'Plus de gruiks !',
-            nextLife: 'Prochaine vie dans :',
-            timerComplete: '--:--:--',
-            get1Life: 'Obtenir 1 vie',
-            price1: '0,50 €',
-            get3Lives: 'Obtenir 3 vies',
-            price3: '1,00 €',
-            home: 'Accueil'
         },
 
         // Pig Names (17 tiers)

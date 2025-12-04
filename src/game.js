@@ -57,13 +57,8 @@ function getPig(value) {
     return PIGS[value] || { tier: 0, name: '?', color: '#ccc' };
 }
 
-// Lives system constants
-const MAX_LIVES = 3;
-const LIFE_REGEN_TIME = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
-
-// Local storage keys
+// Local storage key
 const STORAGE_KEY = 'powersOfPig';
-const AUTH_KEY = 'powersOfPigAuth';
 
 // ========== SOUND SYSTEM (Web Audio API for iOS compatibility) ==========
 class SoundSystem {
@@ -268,10 +263,8 @@ class Game {
         this.moveCount = 0;
         this.highestTierThisSession = 0;
 
-        // Lives system
-        this.lives = MAX_LIVES;
-        this.lastLifeLostTime = null; // Timestamp when a life was last lost (for regen)
-        this.lifeRegenInterval = null;
+        // Feedback context
+        this.feedbackContext = null; // 'gameOver' or 'inGame'
 
         // Unlocked pigs (badges)
         this.unlockedPigs = new Set();
@@ -295,15 +288,11 @@ class Game {
         // Set up event listeners
         this.setupEventListeners();
 
-        // Check for life regeneration
-        this.checkLifeRegen();
-
         // Show home screen
         this.showScreen('home');
 
         // Update displays
         this.updateHighScoreDisplay();
-        this.updateLivesDisplay();
         this.updateSoundButton();
 
         // Set up language toggle and update all text
@@ -315,35 +304,25 @@ class Game {
     cacheElements() {
         // Screens
         this.screens = {
-            gate: document.getElementById('gate-screen'),
             home: document.getElementById('home-screen'),
             game: document.getElementById('game-screen'),
             gameover: document.getElementById('gameover-screen'),
             win: document.getElementById('win-screen'),
-            collection: document.getElementById('collection-screen'),
-            nolives: document.getElementById('nolives-screen')
+            collection: document.getElementById('collection-screen')
         };
 
         // Overlays
         this.overlays = {
             pause: document.getElementById('pause-overlay'),
             restart: document.getElementById('restart-overlay'),
-            purchase: document.getElementById('purchase-overlay'),
-            feedback: document.getElementById('feedback-overlay'),
-            commentFeedback: document.getElementById('comment-feedback-overlay')
+            feedback: document.getElementById('feedback-overlay')
         };
 
         // Feedback modal elements
-        this.feedbackButtons = document.getElementById('feedback-buttons');
-        this.feedbackThanks = document.getElementById('feedback-thanks');
-
-        // Comment feedback modal elements
-        this.feedbackTextarea = document.getElementById('feedback-textarea');
+        this.feedbackSendToInput = document.getElementById('feedback-send-to');
+        this.feedbackImproveTextarea = document.getElementById('feedback-improve');
         this.feedbackSubmitBtn = document.getElementById('feedback-submit');
-        this.commentFeedbackThanks = document.getElementById('comment-feedback-thanks');
-
-        // Purchase modal elements
-        this.purchaseMessage = document.getElementById('purchase-message');
+        this.feedbackSkipBtn = document.getElementById('feedback-skip');
 
         // Game elements
         this.tileContainer = document.getElementById('tile-container');
@@ -357,12 +336,6 @@ class Game {
         this.badgeGrid = document.getElementById('badge-grid');
         this.collectionProgress = document.getElementById('collection-progress');
         this.soundButton = document.getElementById('sound-button');
-
-        // Lives elements
-        this.homeLivesDisplay = document.getElementById('home-lives');
-        this.nextLifeCountdown = document.getElementById('next-life-countdown');
-        this.buyOneLifeBtn = document.getElementById('buy-one-life');
-        this.buyThreeLivesBtn = document.getElementById('buy-three-lives');
     }
 
     // Show a specific screen
@@ -438,7 +411,7 @@ class Game {
         this.moveCount = 0;
 
         // Track game start
-        Analytics.track('game_start', { lives_remaining: this.lives });
+        Analytics.track('game_start');
 
         this.tileContainer.innerHTML = '';
         this.createBackgroundCells();
@@ -861,7 +834,7 @@ class Game {
         const localizedName = strings.pigs[pig.tier] || pig.name;
 
         // Calculate game duration
-        const durationSeconds = this.gameStartTime
+        this.lastGameDuration = this.gameStartTime
             ? Math.floor((Date.now() - this.gameStartTime) / 1000)
             : 0;
 
@@ -871,11 +844,8 @@ class Game {
             highest_pig_name: localizedName,
             score: this.score,
             moves: this.moveCount,
-            duration_seconds: durationSeconds
+            duration_seconds: this.lastGameDuration
         });
-
-        // Lose a life on game over
-        this.loseLife('game_over');
 
         // Sad haptic feedback
         hapticsSystem.vibrateGameOver();
@@ -890,30 +860,42 @@ class Game {
         this.newPigMessage.style.display = 'none';
 
         // Show feedback modal first, then game over screen
-        this.showFeedbackModal(() => {
-            this.showScreen('gameover');
-        });
+        this.showFeedbackModal('gameOver');
     }
 
     // Show feedback modal
-    showFeedbackModal(onComplete) {
+    showFeedbackModal(context) {
         // Reset modal state
-        this.feedbackButtons.style.display = 'flex';
-        this.feedbackThanks.style.display = 'none';
-        this.feedbackOnComplete = onComplete;
+        this.feedbackSendToInput.value = '';
+        this.feedbackImproveTextarea.value = '';
+        this.feedbackContext = context;
+
+        // Track feedback shown
+        Analytics.track('feedback_shown', { context });
 
         this.showOverlay('feedback');
     }
 
     // Handle feedback submission
-    async submitFeedback(rating) {
-        // Show thanks message
-        this.feedbackButtons.style.display = 'none';
-        this.feedbackThanks.style.display = 'block';
+    async submitFeedback() {
+        const sendToText = this.feedbackSendToInput.value.trim();
+        const improvementText = this.feedbackImproveTextarea.value.trim();
 
-        // Send to Supabase
+        // Get game data
+        const highestValue = this.getHighestPig();
+        const pig = getPig(highestValue);
+        const deviceType = this.getDeviceType();
+
+        // Track feedback submitted
+        Analytics.track('feedback_submitted', {
+            context: this.feedbackContext,
+            has_send_to: sendToText.length > 0,
+            has_improvement: improvementText.length > 0
+        });
+
+        // Send to Supabase (even if both fields are empty - still captures metadata)
         try {
-            await fetch(`${SUPABASE_URL}/rest/v1/feedback`, {
+            await fetch(`${SUPABASE_URL}/rest/v1/player_feedback_comments`, {
                 method: 'POST',
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
@@ -921,26 +903,43 @@ class Game {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=minimal'
                 },
-                body: JSON.stringify({ rating })
+                body: JSON.stringify({
+                    send_to_text: sendToText || null,
+                    improvement_text: improvementText || null,
+                    highest_pig_reached: pig.tier,
+                    score: this.score,
+                    moves: this.moveCount,
+                    duration_seconds: this.lastGameDuration || 0,
+                    device_type: deviceType
+                })
             });
         } catch (e) {
             // Fail silently - don't block game flow
             console.warn('Could not submit feedback:', e);
         }
 
-        // Wait 1 second, then close modal and continue
-        setTimeout(() => {
-            this.closeFeedbackModal();
-        }, 1000);
+        this.closeFeedbackModal();
     }
 
-    // Close feedback modal and continue to game over
+    // Skip feedback
+    skipFeedback() {
+        // Track feedback skipped
+        Analytics.track('feedback_skipped', { context: this.feedbackContext });
+
+        this.closeFeedbackModal();
+    }
+
+    // Close feedback modal
     closeFeedbackModal() {
         this.hideOverlay('feedback');
-        if (this.feedbackOnComplete) {
-            this.feedbackOnComplete();
-            this.feedbackOnComplete = null;
+
+        // Handle based on context
+        if (this.feedbackContext === 'gameOver') {
+            this.showScreen('gameover');
         }
+        // For 'inGame' context, just close - return to current game
+
+        this.feedbackContext = null;
     }
 
     // Get device type for feedback
@@ -955,67 +954,6 @@ class Game {
             return 'mobile';
         }
         return 'desktop';
-    }
-
-    // Show comment feedback modal
-    showCommentFeedbackModal() {
-        // Reset modal state
-        this.feedbackTextarea.value = '';
-        this.feedbackSubmitBtn.disabled = true;
-        this.commentFeedbackThanks.style.display = 'none';
-        this.feedbackTextarea.style.display = 'block';
-        this.feedbackSubmitBtn.style.display = 'block';
-
-        this.showOverlay('commentFeedback');
-    }
-
-    // Close comment feedback modal
-    closeCommentFeedbackModal() {
-        this.hideOverlay('commentFeedback');
-    }
-
-    // Submit comment feedback
-    async submitCommentFeedback() {
-        const comment = this.feedbackTextarea.value.trim();
-        if (!comment) return;
-
-        // Hide form, show thanks
-        this.feedbackTextarea.style.display = 'none';
-        this.feedbackSubmitBtn.style.display = 'none';
-        this.commentFeedbackThanks.style.display = 'block';
-
-        // Get highest pig tier from current game
-        const highestValue = this.getHighestPig();
-        const pig = getPig(highestValue);
-        const highestTier = pig.tier;
-
-        // Detect device type
-        const deviceType = this.getDeviceType();
-
-        // Send to Supabase
-        try {
-            await fetch(`${SUPABASE_URL}/rest/v1/player_feedback_comments`, {
-                method: 'POST',
-                headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify({
-                    comment_text: comment,
-                    highest_pig_reached: highestTier,
-                    device_type: deviceType
-                })
-            });
-        } catch (e) {
-            console.warn('Could not submit comment feedback:', e);
-        }
-
-        // Auto-close after 1 second
-        setTimeout(() => {
-            this.closeCommentFeedbackModal();
-        }, 1000);
     }
 
     // Show win screen
@@ -1149,8 +1087,6 @@ class Game {
     saveGame() {
         const data = {
             highScore: this.highScore,
-            lives: this.lives,
-            lastLifeLostTime: this.lastLifeLostTime,
             unlockedPigs: Array.from(this.unlockedPigs),
             soundEnabled: this.soundEnabled
         };
@@ -1175,16 +1111,6 @@ class Game {
                     this.highScore = data.highScore;
                 }
 
-                // Restore lives
-                if (typeof data.lives === 'number') {
-                    this.lives = Math.min(MAX_LIVES, Math.max(0, data.lives));
-                }
-
-                // Restore life regen timestamp
-                if (data.lastLifeLostTime) {
-                    this.lastLifeLostTime = data.lastLifeLostTime;
-                }
-
                 // Restore unlocked pigs
                 if (Array.isArray(data.unlockedPigs)) {
                     this.unlockedPigs = new Set(data.unlockedPigs);
@@ -1201,175 +1127,11 @@ class Game {
         }
     }
 
-    // ========== LIVES SYSTEM ==========
-
-    // Update the lives display on home screen
-    updateLivesDisplay() {
-        const icons = this.homeLivesDisplay.querySelectorAll('.life-icon');
-        icons.forEach((icon, index) => {
-            if (index < this.lives) {
-                icon.classList.remove('empty');
-            } else {
-                icon.classList.add('empty');
-            }
-        });
-    }
-
-    // Lose a life
-    loseLife(reason = 'game_over') {
-        if (this.lives > 0) {
-            this.lives--;
-
-            // Track life lost analytics
-            Analytics.track('life_lost', {
-                reason: reason,
-                lives_remaining: this.lives
-            });
-
-            // Start regen timer if we just lost a life and aren't at max
-            if (this.lives < MAX_LIVES && !this.lastLifeLostTime) {
-                this.lastLifeLostTime = Date.now();
-            }
-            this.updateLivesDisplay();
-            this.saveGame();
-        }
-    }
-
-    // Add a life (from purchase or regen)
-    addLife(count = 1) {
-        this.lives = Math.min(MAX_LIVES, this.lives + count);
-        // If at max lives, clear the regen timer
-        if (this.lives >= MAX_LIVES) {
-            this.lastLifeLostTime = null;
-        }
-        this.updateLivesDisplay();
-        this.saveGame();
-    }
-
-    // Check if life should regenerate
-    checkLifeRegen() {
-        if (this.lives >= MAX_LIVES) {
-            this.lastLifeLostTime = null;
-            return;
-        }
-
-        if (this.lastLifeLostTime) {
-            const elapsed = Date.now() - this.lastLifeLostTime;
-            if (elapsed >= LIFE_REGEN_TIME) {
-                // Regenerate a life
-                this.addLife(1);
-                // Reset timer for next regen if still not at max
-                if (this.lives < MAX_LIVES) {
-                    this.lastLifeLostTime = Date.now();
-                }
-            }
-        }
-    }
-
-    // Start the countdown timer display
-    startCountdownTimer() {
-        // Clear any existing interval
-        if (this.lifeRegenInterval) {
-            clearInterval(this.lifeRegenInterval);
-        }
-
-        this.updateCountdownDisplay();
-
-        this.lifeRegenInterval = setInterval(() => {
-            this.checkLifeRegen();
-            this.updateCountdownDisplay();
-
-            // If we've regained a life and are on nolives screen, go home
-            if (this.lives > 0 && this.currentScreen === 'nolives') {
-                this.showScreen('home');
-            }
-        }, 1000);
-    }
-
-    // Stop the countdown timer
-    stopCountdownTimer() {
-        if (this.lifeRegenInterval) {
-            clearInterval(this.lifeRegenInterval);
-            this.lifeRegenInterval = null;
-        }
-    }
-
-    // Update the countdown display
-    updateCountdownDisplay() {
-        if (this.lives >= MAX_LIVES || !this.lastLifeLostTime) {
-            this.nextLifeCountdown.textContent = getStrings().outOfLives.timerComplete;
-            return;
-        }
-
-        const elapsed = Date.now() - this.lastLifeLostTime;
-        const remaining = Math.max(0, LIFE_REGEN_TIME - elapsed);
-
-        const hours = Math.floor(remaining / (1000 * 60 * 60));
-        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-
-        this.nextLifeCountdown.textContent =
-            `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    // Update purchase button visibility
-    updatePurchaseButtons() {
-        // Show "buy 1 life" if player has < 3 lives
-        this.buyOneLifeBtn.style.display = this.lives < MAX_LIVES ? 'flex' : 'none';
-        // Show "buy 3 lives" only if player has 0 lives
-        this.buyThreeLivesBtn.style.display = this.lives === 0 ? 'flex' : 'none';
-    }
-
-    // Handle purchasing lives (placeholder - simulates purchase)
-    purchaseLives(count) {
-        // In a real app, this would trigger payment flow
-        // For now, show a styled modal and add the lives
-        this.pendingPurchaseCount = count;
-        this.purchaseMessage.textContent = getStrings().purchase.message(count);
-        this.showOverlay('purchase');
-    }
-
-    // Confirm the purchase (called when OK is clicked on modal)
-    confirmPurchase() {
-        if (this.pendingPurchaseCount) {
-            this.addLife(this.pendingPurchaseCount);
-            this.pendingPurchaseCount = null;
-        }
-        this.hideOverlay('purchase');
-
-        // If we now have lives, go to home screen
-        if (this.lives > 0) {
-            this.showScreen('home');
-        } else {
-            this.updatePurchaseButtons();
-        }
-    }
-
-    // Show out of lives screen
-    showNoLivesScreen() {
-        // Track lives exhausted analytics
-        Analytics.track('lives_exhausted', {
-            highest_tier_this_session: this.highestTierThisSession
-        });
-
-        // Start regeneration timer if not already running
-        if (!this.lastLifeLostTime) {
-            this.lastLifeLostTime = Date.now();
-        }
-        this.updatePurchaseButtons();
-        this.startCountdownTimer();
-        this.showScreen('nolives');
-    }
-
     // Set up all event listeners
     setupEventListeners() {
         // Home screen buttons
         document.getElementById('play-button').addEventListener('click', () => {
-            if (this.lives > 0) {
-                this.startGame();
-            } else {
-                this.showNoLivesScreen();
-            }
+            this.startGame();
         });
 
         document.getElementById('collection-button').addEventListener('click', () => {
@@ -1415,75 +1177,30 @@ class Game {
 
         document.getElementById('restart-confirm').addEventListener('click', () => {
             this.hideOverlay('restart');
-            // Restart costs a life
-            this.loseLife('restart');
-            if (this.lives > 0) {
-                this.startGame();
-            } else {
-                this.showNoLivesScreen();
-            }
+            this.startGame();
         });
 
         // Game over screen buttons
         document.getElementById('play-again-button').addEventListener('click', () => {
-            if (this.lives > 0) {
-                this.startGame();
-            } else {
-                this.showNoLivesScreen();
-            }
+            this.startGame();
         });
 
         document.getElementById('gameover-home-button').addEventListener('click', () => {
             this.showScreen('home');
         });
 
-        // No lives screen buttons
-        document.getElementById('buy-one-life').addEventListener('click', () => {
-            this.purchaseLives(1);
-        });
-
-        document.getElementById('buy-three-lives').addEventListener('click', () => {
-            this.purchaseLives(3);
-        });
-
-        document.getElementById('nolives-home-button').addEventListener('click', () => {
-            this.stopCountdownTimer();
-            this.showScreen('home');
-        });
-
-        // Purchase modal OK button
-        document.getElementById('purchase-ok').addEventListener('click', () => {
-            this.confirmPurchase();
-        });
-
         // Feedback modal buttons
-        document.getElementById('feedback-close').addEventListener('click', () => {
-            this.closeFeedbackModal();
-        });
-
-        document.getElementById('feedback-up').addEventListener('click', () => {
-            this.submitFeedback('up');
-        });
-
-        document.getElementById('feedback-down').addEventListener('click', () => {
-            this.submitFeedback('down');
-        });
-
-        // Comment feedback modal
-        document.getElementById('feedback-link').addEventListener('click', () => {
-            this.showCommentFeedbackModal();
-        });
-
-        document.getElementById('comment-feedback-close').addEventListener('click', () => {
-            this.closeCommentFeedbackModal();
-        });
-
-        document.getElementById('feedback-textarea').addEventListener('input', (e) => {
-            this.feedbackSubmitBtn.disabled = e.target.value.trim().length === 0;
-        });
-
         document.getElementById('feedback-submit').addEventListener('click', () => {
-            this.submitCommentFeedback();
+            this.submitFeedback();
+        });
+
+        document.getElementById('feedback-skip').addEventListener('click', () => {
+            this.skipFeedback();
+        });
+
+        // "Give Feedback" link (opens same modal with inGame context)
+        document.getElementById('feedback-link').addEventListener('click', () => {
+            this.showFeedbackModal('inGame');
         });
 
         // Win screen buttons
@@ -1568,103 +1285,7 @@ class Game {
     }
 }
 
-// ========== PASSWORD GATE ==========
-function checkAuthentication() {
-    try {
-        return localStorage.getItem(AUTH_KEY) === 'true';
-    } catch (e) {
-        return false;
-    }
-}
-
-function setAuthenticated() {
-    try {
-        localStorage.setItem(AUTH_KEY, 'true');
-    } catch (e) {
-        // Storage might be disabled - continue anyway
-    }
-}
-
-// Update all text on the gate screen (standalone version for before Game is initialized)
-function updateGateText() {
-    const strings = getStrings();
-
-    // Update all elements with data-i18n attribute on gate screen
-    document.querySelectorAll('#gate-screen [data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        const value = key.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : null, strings);
-        if (value && typeof value === 'string') {
-            el.textContent = value;
-        }
-    });
-
-    // Update placeholder
-    document.querySelectorAll('#gate-screen [data-i18n-placeholder]').forEach(el => {
-        const key = el.getAttribute('data-i18n-placeholder');
-        const value = key.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : null, strings);
-        if (value && typeof value === 'string') {
-            el.placeholder = value;
-        }
-    });
-
-    // Update language toggle button
-    const lang = getCurrentLanguage().toUpperCase();
-    document.querySelectorAll('#gate-screen .lang-toggle').forEach(btn => {
-        btn.textContent = lang;
-    });
-}
-
-function setupGate() {
-    const gateScreen = document.getElementById('gate-screen');
-    const gateForm = document.getElementById('gate-form');
-    const gatePassword = document.getElementById('gate-password');
-    const gateError = document.getElementById('gate-error');
-
-    // Show gate screen
-    gateScreen.classList.add('active');
-
-    // Set up language toggle for gate screen
-    document.querySelectorAll('#gate-screen .lang-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-            toggleLanguage();
-            updateGateText();
-        });
-    });
-
-    // Update text based on current language
-    updateGateText();
-
-    // Focus password input
-    gatePassword.focus();
-
-    gateForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        const password = gatePassword.value.toLowerCase().trim();
-
-        if (password === 'cochon') {
-            // Correct password
-            setAuthenticated();
-            gateScreen.classList.remove('active');
-            gateError.textContent = '';
-            // Start the game
-            new Game();
-        } else {
-            // Wrong password
-            gateError.textContent = getStrings().gate.error;
-            gatePassword.value = '';
-            gatePassword.focus();
-        }
-    });
-}
-
 // Start the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    if (checkAuthentication()) {
-        // Already authenticated, start game directly
-        new Game();
-    } else {
-        // Show password gate
-        setupGate();
-    }
+    new Game();
 });
