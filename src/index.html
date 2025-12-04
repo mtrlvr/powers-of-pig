@@ -89,12 +89,14 @@
             <h2 data-i18n="feedback.title">Quick feedback</h2>
             <div class="feedback-question">
                 <label data-i18n="feedback.question1">Who would you send this to?</label>
-                <input type="text" id="feedback-send-to" class="feedback-input" data-i18n-placeholder="feedback.placeholder1" placeholder="e.g. my brother, a friend who likes puzzle games...">
+                <input type="text" id="feedback-send-to" class="feedback-input" maxlength="500" data-i18n-placeholder="feedback.placeholder1" placeholder="e.g. my brother, a friend who likes puzzle games...">
             </div>
             <div class="feedback-question">
                 <label data-i18n="feedback.question2">What would make it better?</label>
-                <textarea id="feedback-improve" class="feedback-textarea" rows="3"></textarea>
+                <textarea id="feedback-improve" class="feedback-textarea" rows="3" maxlength="1000"></textarea>
             </div>
+            <!-- Honeypot field - hidden from humans, bots will fill it -->
+            <input type="text" name="website" id="feedback-honeypot" autocomplete="off" tabindex="-1" style="position:absolute;left:-9999px;opacity:0;">
             <div class="feedback-buttons">
                 <button class="btn btn-primary" id="feedback-submit" data-i18n="feedback.submit">Submit</button>
                 <button class="btn btn-secondary" id="feedback-skip" data-i18n="feedback.skip">Maybe later</button>

@@ -878,8 +878,30 @@ class Game {
 
     // Handle feedback submission
     async submitFeedback() {
+        // Honeypot check - bots fill this hidden field, humans don't see it
+        const honeypot = document.getElementById('feedback-honeypot');
+        if (honeypot && honeypot.value) {
+            this.closeFeedbackModal();
+            return;
+        }
+
+        // Rate limit: max 1 submission per 60 seconds
+        const RATE_LIMIT_KEY = 'pop_last_feedback';
+        const RATE_LIMIT_MS = 60000;
+        const lastSubmission = sessionStorage.getItem(RATE_LIMIT_KEY);
+        if (lastSubmission && Date.now() - parseInt(lastSubmission) < RATE_LIMIT_MS) {
+            this.closeFeedbackModal();
+            return;
+        }
+
         const sendToText = this.feedbackSendToInput.value.trim();
         const improvementText = this.feedbackImproveTextarea.value.trim();
+
+        // Length validation (defense in depth - HTML maxlength is first line)
+        if (sendToText.length > 500 || improvementText.length > 1000) {
+            this.closeFeedbackModal();
+            return;
+        }
 
         // Get game data
         const highestValue = this.getHighestPig();
@@ -913,6 +935,8 @@ class Game {
                     device_type: deviceType
                 })
             });
+            // Mark submission time for rate limiting
+            sessionStorage.setItem('pop_last_feedback', Date.now().toString());
         } catch (e) {
             // Fail silently - don't block game flow
             console.warn('Could not submit feedback:', e);

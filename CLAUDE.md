@@ -83,7 +83,13 @@ A two-question feedback modal appears on game over (before the game over screen)
 - `device_type` — 'mobile' or 'desktop'
 - `submitted_at` — timestamp
 
-Data sent to Supabase `player_feedback_comments` table. Supabase config (URL and anon key) is at the top of game.js.
+Data sent to Supabase `player_feedback_comments` table. Supabase config (URL and anon key) is at the top of game.js. Row-Level Security (RLS) is enabled on the table.
+
+**Security hardening:**
+- Input length limits: `maxlength="500"` on text input, `maxlength="1000"` on textarea
+- Rate limiting: Max 1 submission per 60 seconds (tracked in sessionStorage via `pop_last_feedback`)
+- Honeypot field: Hidden `#feedback-honeypot` input catches bots that auto-fill all fields
+- Defense in depth: JS validates lengths before submission even though HTML enforces maxlength
 
 ### Analytics System (PostHog)
 PostHog is integrated for player behaviour tracking during soft launch. The SDK is loaded in `index.html` head.
@@ -147,3 +153,4 @@ The game supports English and French with a language toggle visible on all scree
 10. **Localisation** - English/French language toggle with browser locale detection and localStorage persistence
 11. **Analytics** - PostHog integration for player behaviour tracking
 12. **Reddit Launch Prep** - Removed password gate and lives system, streamlined feedback flow
+13. **Security Hardening** - Input validation, rate limiting, honeypot anti-bot on feedback form
