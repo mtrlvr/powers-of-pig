@@ -93,6 +93,19 @@ const STRINGS = {
             15: 'His Royal Hogness',
             16: 'The Cosmic Sow',
             17: 'THE LION PIG'
+        },
+
+        // Tutorial
+        tutorial: {
+            swipeInstruction: 'Swipe right',
+            keyInstruction: 'Press → or swipe right',
+            firstMerge: 'Pip + Pip = Sprout!',
+            match17: 'Match pigs to discover all 17!'
+        },
+
+        // Help System
+        help: {
+            stuck: 'Stuck?'
         }
     },
 
@@ -186,6 +199,19 @@ const STRINGS = {
             15: 'Sa Majesté Porcine',
             16: 'La Truie Cosmique',
             17: 'LE GROIN LION'
+        },
+
+        // Tutorial
+        tutorial: {
+            swipeInstruction: 'Balaye vers la droite',
+            keyInstruction: 'Appuie sur → ou balaye',
+            firstMerge: 'Pépin + Pépin = Pousse !',
+            match17: 'Combine les cochons pour tous les découvrir !'
+        },
+
+        // Help System
+        help: {
+            stuck: 'Bloqué ?'
         }
     }
 };

@@ -229,6 +229,7 @@ body {
         0 4px 8px rgba(80, 60, 40, 0.25),
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(110, 85, 60, 0.6);
+    overflow: visible; /* Allow tutorial arrow to show outside */
 }
 
 /* Board base shadow for depth/thickness illusion */
@@ -875,4 +876,319 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+/* ========== TUTORIAL SYSTEM ========== */
+
+/* Tutorial Arrow */
+.tutorial-arrow {
+    position: absolute;
+    z-index: 50;
+    pointer-events: none;
+    font-size: 3.5rem;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.3s;
+    /* Circular green background */
+    background: rgba(90, 111, 82, 0.95);
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Glow effect */
+    box-shadow: 0 0 20px rgba(133, 184, 122, 0.8),
+                0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.tutorial-arrow.active {
+    opacity: 1;
+}
+
+/* Right arrow positioning - outside the board */
+.tutorial-arrow-right {
+    top: 50%;
+    right: -85px;
+    transform: translateY(-50%);
+}
+
+.tutorial-arrow-right::before {
+    content: '→';
+    display: inline-block;
+    animation: arrow-pulse-right 1s ease-in-out infinite;
+}
+
+@keyframes arrow-pulse-right {
+    0%, 100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    50% {
+        transform: translateX(12px);
+        opacity: 0.7;
+    }
+}
+
+/* Other arrow directions - positioned outside board */
+.tutorial-arrow-left::before { content: '←'; }
+.tutorial-arrow-up::before { content: '↑'; }
+.tutorial-arrow-down::before { content: '↓'; }
+
+.tutorial-arrow-left {
+    top: 50%;
+    left: -85px;
+    transform: translateY(-50%);
+}
+
+.tutorial-arrow-left.active::before {
+    animation: arrow-pulse-left 1s ease-in-out infinite;
+}
+
+@keyframes arrow-pulse-left {
+    0%, 100% { transform: translateX(0); opacity: 1; }
+    50% { transform: translateX(-8px); opacity: 0.8; }
+}
+
+.tutorial-arrow-up {
+    top: -85px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.tutorial-arrow-up.active::before {
+    animation: arrow-pulse-up 1s ease-in-out infinite;
+}
+
+@keyframes arrow-pulse-up {
+    0%, 100% { transform: translateY(0); opacity: 1; }
+    50% { transform: translateY(-8px); opacity: 0.8; }
+}
+
+.tutorial-arrow-down {
+    bottom: -85px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.tutorial-arrow-down.active::before {
+    animation: arrow-pulse-down 1s ease-in-out infinite;
+}
+
+@keyframes arrow-pulse-down {
+    0%, 100% { transform: translateY(0); opacity: 1; }
+    50% { transform: translateY(8px); opacity: 0.8; }
+}
+
+/* Tutorial Text */
+.tutorial-text {
+    text-align: center;
+    background: rgba(90, 111, 82, 0.95);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s;
+    margin-top: -5px;
+    z-index: 50;
+}
+
+.tutorial-text.active {
+    opacity: 1;
+}
+
+/* Mergeable Tiles Hint (moves 2-4) */
+.tile.mergeable-hint {
+    animation: mergeable-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mergeable-pulse {
+    0%, 100% {
+        box-shadow:
+            0 3px 6px rgba(60, 45, 30, 0.2),
+            0 1px 3px rgba(60, 45, 30, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.35),
+            0 0 0 0 rgba(133, 184, 122, 0.5);
+    }
+    50% {
+        box-shadow:
+            0 3px 6px rgba(60, 45, 30, 0.2),
+            0 1px 3px rgba(60, 45, 30, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.35),
+            0 0 0 8px rgba(133, 184, 122, 0);
+    }
+}
+
+/* ========== FIRST MERGE CELEBRATION ========== */
+
+.confetti-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 100;
+    border-radius: 16px;
+}
+
+.confetti-piece {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    opacity: 0;
+}
+
+.confetti-piece.active {
+    animation: confetti-fall 1.5s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(200px) rotate(720deg) scale(0.5);
+        opacity: 0;
+    }
+}
+
+.merge-text {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(to bottom, #85b87a, #6b9a60);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    z-index: 101;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+}
+
+.merge-text.active {
+    opacity: 1;
+    animation: merge-text-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes merge-text-bounce {
+    0% { transform: translateX(-50%) scale(0.5); }
+    50% { transform: translateX(-50%) scale(1.1); }
+    100% { transform: translateX(-50%) scale(1); }
+}
+
+/* Celebration scale on merged tile */
+.tile.celebration-scale {
+    animation: celebration-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+@keyframes celebration-pop {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+/* ========== STUCK HELP SYSTEM ========== */
+
+/* Stuck mode for instructions text */
+.instructions.stuck-mode {
+    cursor: pointer;
+    color: #5a6f52;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.instructions.stuck-mode:hover {
+    color: #85b87a;
+    text-decoration: underline;
+}
+
+/* Hint arrow - matches tutorial arrow styling, positioned outside board */
+.hint-arrow {
+    position: absolute;
+    z-index: 50;
+    pointer-events: none;
+    font-size: 3rem;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.3s;
+    /* Circular green background */
+    background: rgba(90, 111, 82, 0.9);
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Glow effect */
+    box-shadow: 0 0 15px rgba(133, 184, 122, 0.7),
+                0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+.hint-arrow.active {
+    opacity: 1;
+}
+
+.hint-arrow-right {
+    top: 50%;
+    right: -75px;
+    transform: translateY(-50%);
+}
+
+.hint-arrow-right::before {
+    content: '→';
+    display: inline-block;
+    animation: hint-pulse 0.8s ease-in-out infinite;
+}
+
+.hint-arrow-left {
+    top: 50%;
+    left: -75px;
+    transform: translateY(-50%);
+}
+
+.hint-arrow-left::before {
+    content: '←';
+    display: inline-block;
+    animation: hint-pulse 0.8s ease-in-out infinite;
+}
+
+.hint-arrow-up {
+    top: -75px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.hint-arrow-up::before {
+    content: '↑';
+    display: inline-block;
+    animation: hint-pulse 0.8s ease-in-out infinite;
+}
+
+.hint-arrow-down {
+    bottom: -75px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.hint-arrow-down::before {
+    content: '↓';
+    display: inline-block;
+    animation: hint-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes hint-pulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
 }

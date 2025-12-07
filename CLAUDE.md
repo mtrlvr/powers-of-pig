@@ -139,6 +139,38 @@ The game supports English and French with a language toggle visible on all scree
 2. Add `data-i18n="section.key"` attribute to the HTML element
 3. For dynamic text, call `getStrings().section.key` directly in JavaScript
 
+### Tutorial & Help System
+First-time players get a guided tutorial, and all players have access to a "Stuck?" help system.
+
+**Tutorial Flow:**
+1. **Move 0**: Two Pips placed at `[3,1]` and `[3,2]` so RIGHT swipe merges them. Arrow points right, instruction text shows "Swipe to push pigs together". Wrong directions are blocked.
+2. **Move 1**: First merge triggers confetti celebration and "Pip + Pip = Sprout!" text. Then shows "Match pigs to discover all 17!" for 2.5 seconds.
+3. **Moves 2-4**: Subtle pulsing highlight on mergeable tiles when available.
+4. **Move 5+**: Tutorial marked complete, localStorage flag set.
+
+**First Merge Celebration:**
+- Confetti burst (20 colorful pieces) contained within board area
+- "Pip + Pip = Sprout!" text with bounce animation
+- Scale-up animation on the merged Sprout tile
+- Only happens once ever (persisted via `pop_first_merge_celebrated`)
+
+**"Stuck?" Help System:**
+- Appears after 10 seconds of inactivity (non-tutorial games only)
+- Replaces instruction text with "Stuck?" (clickable)
+- On click: shows directional arrow for recommended move
+- Arrow auto-hides after 5 seconds or on next swipe
+- Recommended direction calculated by simulating all moves and scoring merges
+
+**localStorage Keys:**
+- `pop_tutorial_complete`: Tutorial finished flag
+- `pop_first_merge_celebrated`: First celebration shown
+
+**Analytics Events:**
+- `tutorial_started`: First game with tutorial
+- `tutorial_completed`: After move 5 (payload: `moves`)
+- `stuck_hint_shown`: After 10s inactivity
+- `stuck_hint_used`: User clicks "Stuck?" (payload: `recommended_direction`)
+
 ## Build Phases (All Complete)
 
 1. **Core Game Engine** - 4x4 grid, tile spawning, merge logic, win/lose detection
@@ -154,3 +186,4 @@ The game supports English and French with a language toggle visible on all scree
 11. **Analytics** - PostHog integration for player behaviour tracking
 12. **Reddit Launch Prep** - Removed password gate and lives system, streamlined feedback flow
 13. **Security Hardening** - Input validation, rate limiting, honeypot anti-bot on feedback form
+14. **Tutorial & Help System** - First-time tutorial with guided first merge, confetti celebration, and "Stuck?" help

@@ -57,8 +57,10 @@ function getPig(value) {
     return PIGS[value] || { tier: 0, name: '?', color: '#ccc' };
 }
 
-// Local storage key
+// Local storage keys
 const STORAGE_KEY = 'powersOfPig';
+const TUTORIAL_COMPLETE_KEY = 'pop_tutorial_complete';
+const FIRST_MERGE_CELEBRATED_KEY = 'pop_first_merge_celebrated';
 
 // ========== SOUND SYSTEM (Web Audio API for iOS compatibility) ==========
 class SoundSystem {
@@ -266,6 +268,17 @@ class Game {
         // Feedback context
         this.feedbackContext = null; // 'gameOver' or 'inGame'
 
+        // Tutorial state
+        this.tutorialActive = false;
+        this.tutorialMoveCount = 0;
+        this.tutorialDirection = null; // 'left', 'right', 'up', 'down'
+        this.firstMergeCelebrated = false;
+
+        // Help system state
+        this.inactivityTimer = null;
+        this.stuckHintVisible = false;
+        this.hintArrowTimer = null;
+
         // Unlocked pigs (badges)
         this.unlockedPigs = new Set();
 
@@ -399,7 +412,6 @@ class Game {
         soundSystem.setEnabled(this.soundEnabled);
         // Haptics are always on, independent of sound toggle
 
-        this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
         this.score = 0;
         this.gameOver = false;
         this.won = false;
@@ -410,14 +422,29 @@ class Game {
         this.gameStartTime = Date.now();
         this.moveCount = 0;
 
-        // Track game start
-        Analytics.track('game_start');
+        // Clear any active timers
+        this.clearInactivityTimer();
 
         this.tileContainer.innerHTML = '';
         this.createBackgroundCells();
 
-        this.spawnTile();
-        this.spawnTile();
+        // Check if tutorial should run (first-time player)
+        if (!this.isTutorialComplete()) {
+            // Tutorial mode: controlled board setup
+            this.setupTutorialBoard();
+            this.showTutorialUI();
+            // Track game start (tutorial already tracks tutorial_started)
+        } else {
+            // Normal mode: random tile spawn
+            this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
+            this.tutorialActive = false;
+            this.spawnTile();
+            this.spawnTile();
+            // Track game start
+            Analytics.track('game_start');
+            // Start inactivity timer for help system
+            this.startInactivityTimer();
+        }
 
         this.updateScore();
         this.showScreen('game');
@@ -487,6 +514,525 @@ class Game {
         // No sound/haptic for spawning - only play on merge
 
         return true;
+    }
+
+    // ========== TUTORIAL SYSTEM ==========
+
+    // Check if tutorial should run (first-time player)
+    isTutorialComplete() {
+        return localStorage.getItem(TUTORIAL_COMPLETE_KEY) === 'true';
+    }
+
+    // Check if first merge celebration has been shown
+    isFirstMergeCelebrated() {
+        return localStorage.getItem(FIRST_MERGE_CELEBRATED_KEY) === 'true';
+    }
+
+    // Set up tutorial board with 2 Pips in controlled positions
+    // Places tiles at [3,1] and [3,2] so RIGHT swipe merges them to [3,3]
+    setupTutorialBoard() {
+        this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
+
+        // Place two Pips in bottom row, adjacent - swipe RIGHT to merge
+        this.grid[3][1] = { value: 2, row: 3, col: 1, isNew: true, merged: false };
+        this.grid[3][2] = { value: 2, row: 3, col: 2, isNew: true, merged: false };
+
+        this.tutorialDirection = 'right';
+        this.tutorialActive = true;
+        this.tutorialMoveCount = 0;
+
+        // Track that Pip has been unlocked
+        this.unlockPig(2);
+
+        // Track tutorial started
+        Analytics.track('tutorial_started');
+    }
+
+    // Detect if device is mobile (touch-primary)
+    isMobileDevice() {
+        return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    }
+
+    // Show tutorial UI elements
+    showTutorialUI() {
+        const arrow = document.getElementById('tutorial-arrow');
+        const text = document.getElementById('tutorial-text');
+        const strings = getStrings();
+
+        // Choose instruction based on device type
+        const instruction = this.isMobileDevice()
+            ? strings.tutorial.swipeInstruction
+            : strings.tutorial.keyInstruction;
+
+        if (arrow) {
+            // Position arrow for right swipe
+            arrow.className = 'tutorial-arrow tutorial-arrow-right active';
+        }
+
+        if (text) {
+            text.textContent = instruction;
+            text.classList.add('active');
+        }
+
+        // Update instruction text to tutorial text
+        const instructions = document.querySelector('.instructions');
+        if (instructions) {
+            instructions.textContent = instruction;
+        }
+    }
+
+    // Hide tutorial arrow (after first correct move)
+    hideTutorialArrow() {
+        const arrow = document.getElementById('tutorial-arrow');
+        if (arrow) {
+            arrow.classList.remove('active');
+        }
+    }
+
+    // Hide all tutorial UI
+    hideTutorialUI() {
+        const arrow = document.getElementById('tutorial-arrow');
+        const text = document.getElementById('tutorial-text');
+
+        if (arrow) arrow.classList.remove('active');
+        if (text) text.classList.remove('active');
+
+        // Remove mergeable hints from tiles
+        document.querySelectorAll('.tile.mergeable-hint').forEach(tile => {
+            tile.classList.remove('mergeable-hint');
+        });
+
+        // Restore original instruction text
+        const instructions = document.querySelector('.instructions');
+        if (instructions) {
+            instructions.textContent = getStrings().game.instructions;
+            instructions.classList.remove('stuck-mode');
+        }
+    }
+
+    // Advance tutorial after successful move
+    advanceTutorial() {
+        this.tutorialMoveCount++;
+
+        if (this.tutorialMoveCount === 1) {
+            // First merge just happened - hide arrow
+            this.hideTutorialArrow();
+
+            // Show "Match pigs to discover all 17!" after celebration
+            setTimeout(() => {
+                const text = document.getElementById('tutorial-text');
+                const strings = getStrings();
+                if (text) {
+                    text.textContent = strings.tutorial.match17;
+                    text.classList.add('active');
+                }
+
+                // Fade out after 2.5 seconds
+                setTimeout(() => {
+                    if (text) text.classList.remove('active');
+                }, 2500);
+            }, 2500); // Wait for celebration to finish
+
+        } else if (this.tutorialMoveCount >= 2 && this.tutorialMoveCount <= 4) {
+            // Show subtle hint on mergeable pigs
+            this.showMergeableHint();
+
+        } else if (this.tutorialMoveCount >= 5) {
+            // Tutorial complete
+            this.completeTutorial();
+        }
+    }
+
+    // Show pulsing hint on mergeable tiles (moves 2-4)
+    showMergeableHint() {
+        // Wait for render to complete
+        requestAnimationFrame(() => {
+            // Find tiles that can merge
+            const mergeablePairs = this.findMergeablePairs();
+
+            if (mergeablePairs.length > 0) {
+                // Highlight first mergeable tile
+                const [row, col] = mergeablePairs[0];
+                const tiles = this.tileContainer.querySelectorAll('.tile');
+
+                tiles.forEach(tile => {
+                    const tileRow = parseInt(tile.style.gridRow) - 1;
+                    const tileCol = parseInt(tile.style.gridColumn) - 1;
+
+                    if (tileRow === row && tileCol === col) {
+                        tile.classList.add('mergeable-hint');
+
+                        // Remove hint after 3 seconds
+                        setTimeout(() => {
+                            tile.classList.remove('mergeable-hint');
+                        }, 3000);
+                    }
+                });
+            }
+        });
+    }
+
+    // Find positions of tiles that can merge
+    findMergeablePairs() {
+        const pairs = [];
+
+        for (let row = 0; row < this.size; row++) {
+            for (let col = 0; col < this.size; col++) {
+                const tile = this.grid[row][col];
+                if (!tile) continue;
+
+                // Check right neighbor
+                if (col < this.size - 1 && this.grid[row][col + 1] &&
+                    this.grid[row][col + 1].value === tile.value) {
+                    pairs.push([row, col]);
+                }
+                // Check bottom neighbor
+                if (row < this.size - 1 && this.grid[row + 1][col] &&
+                    this.grid[row + 1][col].value === tile.value) {
+                    pairs.push([row, col]);
+                }
+            }
+        }
+
+        return pairs;
+    }
+
+    // Complete the tutorial
+    completeTutorial() {
+        this.tutorialActive = false;
+        this.hideTutorialUI();
+
+        // Persist completion
+        localStorage.setItem(TUTORIAL_COMPLETE_KEY, 'true');
+
+        // Track completion
+        Analytics.track('tutorial_completed', { moves: this.tutorialMoveCount });
+
+        // Start inactivity timer for help system
+        this.startInactivityTimer();
+    }
+
+    // ========== FIRST MERGE CELEBRATION ==========
+
+    // Show first merge celebration with confetti
+    showFirstMergeCelebration() {
+        // Mark as celebrated
+        localStorage.setItem(FIRST_MERGE_CELEBRATED_KEY, 'true');
+
+        // Show confetti
+        this.showConfetti();
+
+        // Show "Pip + Pip = Sprout!" text
+        const mergeText = document.getElementById('merge-text');
+        const strings = getStrings();
+        if (mergeText) {
+            mergeText.textContent = strings.tutorial.firstMerge;
+            mergeText.classList.add('active');
+
+            // Fade out after 2 seconds
+            setTimeout(() => {
+                mergeText.classList.remove('active');
+            }, 2000);
+        }
+
+        // Add celebration scale to the Sprout tile
+        requestAnimationFrame(() => {
+            const sproutTile = this.tileContainer.querySelector('.tile-4');
+            if (sproutTile) {
+                sproutTile.classList.add('celebration-scale');
+                // Remove class after animation
+                setTimeout(() => {
+                    sproutTile.classList.remove('celebration-scale');
+                }, 600);
+            }
+        });
+    }
+
+    // Generate confetti pieces
+    showConfetti() {
+        const container = document.getElementById('confetti-container');
+        if (!container) return;
+
+        // Clear any existing confetti
+        container.innerHTML = '';
+
+        const colors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#9b59b6', '#F8D8D6'];
+        const numPieces = 20;
+
+        // Get container dimensions for positioning
+        const rect = container.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+
+        for (let i = 0; i < numPieces; i++) {
+            const piece = document.createElement('div');
+            piece.className = 'confetti-piece';
+            piece.style.backgroundColor = colors[i % colors.length];
+
+            // Random position near center with spread
+            const spreadX = (Math.random() - 0.5) * 120;
+            const spreadY = (Math.random() - 0.5) * 60;
+            piece.style.left = `${centerX + spreadX}px`;
+            piece.style.top = `${centerY + spreadY}px`;
+
+            // Random rotation and delay
+            piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+            piece.style.animationDelay = `${Math.random() * 0.3}s`;
+
+            // Random size variation
+            const size = 8 + Math.random() * 6;
+            piece.style.width = `${size}px`;
+            piece.style.height = `${size}px`;
+
+            container.appendChild(piece);
+
+            // Trigger animation
+            requestAnimationFrame(() => {
+                piece.classList.add('active');
+            });
+        }
+
+        // Cleanup after animation
+        setTimeout(() => {
+            container.innerHTML = '';
+        }, 2000);
+    }
+
+    // ========== STUCK HELP SYSTEM ==========
+
+    // Start the inactivity timer
+    startInactivityTimer() {
+        this.clearInactivityTimer();
+
+        // Only run if not in tutorial and game is active
+        if (this.tutorialActive || this.currentScreen !== 'game' || this.gameOver) {
+            return;
+        }
+
+        this.inactivityTimer = setTimeout(() => {
+            this.showStuckHint();
+        }, 7000); // 7 seconds
+    }
+
+    // Clear the inactivity timer
+    clearInactivityTimer() {
+        if (this.inactivityTimer) {
+            clearTimeout(this.inactivityTimer);
+            this.inactivityTimer = null;
+        }
+        if (this.hintArrowTimer) {
+            clearTimeout(this.hintArrowTimer);
+            this.hintArrowTimer = null;
+        }
+    }
+
+    // Reset inactivity timer on player input
+    resetInactivityTimer() {
+        // Hide stuck hint if visible
+        if (this.stuckHintVisible) {
+            this.hideStuckHint();
+        }
+
+        // Hide hint arrow
+        this.hideHintArrow();
+
+        // Restart timer
+        this.startInactivityTimer();
+    }
+
+    // Show "Stuck?" hint
+    showStuckHint() {
+        if (this.tutorialActive || this.currentScreen !== 'game' || this.gameOver) {
+            return;
+        }
+
+        const instructions = document.querySelector('.instructions');
+        const strings = getStrings();
+
+        if (instructions) {
+            instructions.textContent = strings.help.stuck;
+            instructions.classList.add('stuck-mode');
+            this.stuckHintVisible = true;
+
+            // Track analytics
+            Analytics.track('stuck_hint_shown');
+        }
+    }
+
+    // Hide "Stuck?" hint and restore original text
+    hideStuckHint() {
+        const instructions = document.querySelector('.instructions');
+        const strings = getStrings();
+
+        if (instructions) {
+            instructions.textContent = strings.game.instructions;
+            instructions.classList.remove('stuck-mode');
+            this.stuckHintVisible = false;
+        }
+    }
+
+    // Get recommended move direction
+    getRecommendedDirection() {
+        const directions = ['up', 'down', 'left', 'right'];
+        let bestDirection = null;
+        let bestScore = -1;
+
+        for (const dir of directions) {
+            const score = this.evaluateMove(dir);
+            if (score > bestScore) {
+                bestScore = score;
+                bestDirection = dir;
+            }
+        }
+
+        return bestDirection;
+    }
+
+    // Evaluate a potential move (simulate on copy)
+    evaluateMove(direction) {
+        // Create a deep copy of the grid
+        const gridCopy = this.grid.map(row =>
+            row.map(tile => tile ? { ...tile } : null)
+        );
+
+        let score = 0;
+        let mergeCount = 0;
+        let moved = false;
+
+        // Simulate the move
+        const vectors = {
+            up: { row: -1, col: 0 },
+            down: { row: 1, col: 0 },
+            left: { row: 0, col: -1 },
+            right: { row: 0, col: 1 }
+        };
+
+        const vec = vectors[direction];
+
+        // Process tiles in correct order
+        const processOrder = this.getMoveProcessOrder(direction);
+
+        for (const { row, col } of processOrder) {
+            const tile = gridCopy[row][col];
+            if (!tile) continue;
+
+            let newRow = row;
+            let newCol = col;
+            let merged = false;
+
+            // Move tile as far as possible
+            while (true) {
+                const nextRow = newRow + vec.row;
+                const nextCol = newCol + vec.col;
+
+                if (nextRow < 0 || nextRow >= this.size || nextCol < 0 || nextCol >= this.size) {
+                    break;
+                }
+
+                const nextTile = gridCopy[nextRow][nextCol];
+
+                if (nextTile === null) {
+                    newRow = nextRow;
+                    newCol = nextCol;
+                } else if (nextTile.value === tile.value && !nextTile.merged) {
+                    newRow = nextRow;
+                    newCol = nextCol;
+                    merged = true;
+                    break;
+                } else {
+                    break;
+                }
+            }
+
+            if (newRow !== row || newCol !== col) {
+                moved = true;
+                gridCopy[row][col] = null;
+
+                if (merged) {
+                    const newValue = tile.value * 2;
+                    gridCopy[newRow][newCol] = { value: newValue, merged: true };
+                    score += newValue;
+                    mergeCount++;
+                    // Bonus for higher tier merges
+                    score += getPig(newValue).tier * 5;
+                } else {
+                    tile.row = newRow;
+                    tile.col = newCol;
+                    gridCopy[newRow][newCol] = tile;
+                }
+            }
+        }
+
+        // No valid move
+        if (!moved) return -1;
+
+        // Bonus for merges
+        return score + (mergeCount * 20);
+    }
+
+    // Get the order to process tiles for a move direction
+    getMoveProcessOrder(direction) {
+        const order = [];
+
+        if (direction === 'left') {
+            for (let row = 0; row < this.size; row++) {
+                for (let col = 1; col < this.size; col++) {
+                    order.push({ row, col });
+                }
+            }
+        } else if (direction === 'right') {
+            for (let row = 0; row < this.size; row++) {
+                for (let col = this.size - 2; col >= 0; col--) {
+                    order.push({ row, col });
+                }
+            }
+        } else if (direction === 'up') {
+            for (let col = 0; col < this.size; col++) {
+                for (let row = 1; row < this.size; row++) {
+                    order.push({ row, col });
+                }
+            }
+        } else if (direction === 'down') {
+            for (let col = 0; col < this.size; col++) {
+                for (let row = this.size - 2; row >= 0; row--) {
+                    order.push({ row, col });
+                }
+            }
+        }
+
+        return order;
+    }
+
+    // Show hint arrow
+    showHintArrow() {
+        const direction = this.getRecommendedDirection();
+        if (!direction) return;
+
+        const arrow = document.getElementById('hint-arrow');
+        if (arrow) {
+            arrow.className = `hint-arrow hint-arrow-${direction} active`;
+
+            // Track analytics
+            Analytics.track('stuck_hint_used', { recommended_direction: direction });
+
+            // Auto-hide after 5 seconds
+            this.hintArrowTimer = setTimeout(() => {
+                this.hideHintArrow();
+            }, 5000);
+        }
+    }
+
+    // Hide hint arrow
+    hideHintArrow() {
+        const arrow = document.getElementById('hint-arrow');
+        if (arrow) {
+            arrow.classList.remove('active');
+        }
+
+        if (this.hintArrowTimer) {
+            clearTimeout(this.hintArrowTimer);
+            this.hintArrowTimer = null;
+        }
     }
 
     // Unlock a pig (add to collection)
@@ -579,6 +1125,17 @@ class Game {
     move(direction) {
         if (this.gameOver || this.currentScreen !== 'game') return;
 
+        // Reset inactivity timer on any move attempt
+        this.resetInactivityTimer();
+
+        // Tutorial Move 0: Block wrong directions
+        if (this.tutorialActive && this.tutorialMoveCount === 0) {
+            if (direction !== this.tutorialDirection) {
+                // Block the move - do nothing
+                return;
+            }
+        }
+
         // Save state before move (for undo)
         this.saveState();
 
@@ -644,6 +1201,16 @@ class Game {
             if (highestMergeTier > 0) {
                 soundSystem.playOink(highestMergeTier);
                 hapticsSystem.vibrateForTier(highestMergeTier);
+
+                // First merge celebration (only once ever)
+                if (!this.isFirstMergeCelebrated()) {
+                    this.showFirstMergeCelebration();
+                }
+            }
+
+            // Advance tutorial if active
+            if (this.tutorialActive) {
+                this.advanceTutorial();
             }
 
             this.spawnTile();
@@ -660,6 +1227,12 @@ class Game {
             else if (this.checkGameOver()) {
                 this.gameOver = true;
                 this.updateHighScore();
+
+                // If still in tutorial, mark it complete
+                if (this.tutorialActive) {
+                    this.completeTutorial();
+                }
+
                 setTimeout(() => this.showGameOverScreen(), 300);
             }
         } else {
@@ -1225,6 +1798,13 @@ class Game {
         // "Give Feedback" link (opens same modal with inGame context)
         document.getElementById('feedback-link').addEventListener('click', () => {
             this.showFeedbackModal('inGame');
+        });
+
+        // "Stuck?" click handler (shows hint arrow)
+        document.querySelector('.instructions').addEventListener('click', () => {
+            if (this.stuckHintVisible) {
+                this.showHintArrow();
+            }
         });
 
         // Win screen buttons
