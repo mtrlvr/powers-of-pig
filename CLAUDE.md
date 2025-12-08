@@ -171,6 +171,51 @@ First-time players get a guided tutorial, and all players have access to a "Stuc
 - `stuck_hint_shown`: After 10s inactivity
 - `stuck_hint_used`: User clicks "Stuck?" (payload: `recommended_direction`)
 
+### Game Over Screen & Share System
+Full-screen game over experience with shareable content for viral growth.
+
+**Game Over Screen Layout:**
+- **Hero section**: Large pig image (160px), pig name, tier indicator ("Tier X of 17")
+- **Crown**: Displayed only for tier 17 (THE LION PIG) instead of tier indicator
+- **Score section**: Locale-formatted score with share message preview
+- **Buttons**: Share (primary), Play Again (secondary), View Board + Home (tertiary text links)
+
+**Share Functionality:**
+- Uses `html2canvas` library (~40KB CDN) for image capture
+- Share card: 400x500px with pig image, score, message, CTA
+- Web Share API on mobile with image attachment
+- Clipboard fallback on desktop with toast notification
+- Mid-game share button in game header
+
+**Share Messages (localized):**
+- EN: "I reached {pigName} and scored {score}. Can you beat me?"
+- FR: "J'ai atteint {pigName} et marqué {score} points. Est-ce que tu peux faire mieux ?"
+
+**Number Formatting:**
+- `formatNumber()` helper uses `Intl.NumberFormat`
+- EN: comma separator (1,234)
+- FR: narrow no-break space (1 234)
+
+**View Board Feature:**
+- Captures board state before game over (`captureBoardState()`)
+- Modal overlay with frozen final grid (non-interactive)
+- Uses same CSS Grid layout as game board
+
+**Key Components:**
+- `ShareSystem` object: `canNativeShare()`, `captureShareCard()`, `nativeShare()`, `copyToClipboard()`
+- `#share-card`: Hidden off-screen element for html2canvas capture
+- `#view-board-overlay`: Modal for viewing final board state
+- `#share-mid-game-button`: Header button for mid-game sharing
+
+**Analytics Events:**
+| Event | Trigger | Payload |
+|-------|---------|---------|
+| `game_over_screen_viewed` | Game over screen shown | `highest_tier`, `score` |
+| `share_initiated` | Share button clicked | `context`, `method`, `highest_tier`, `score` |
+| `share_completed` | Share successful | `context`, `method` |
+| `share_cancelled` | User cancels share sheet | `context` |
+| `view_board_clicked` | View Board clicked | — |
+
 ## Build Phases (All Complete)
 
 1. **Core Game Engine** - 4x4 grid, tile spawning, merge logic, win/lose detection
@@ -187,3 +232,4 @@ First-time players get a guided tutorial, and all players have access to a "Stuc
 12. **Reddit Launch Prep** - Removed password gate and lives system, streamlined feedback flow
 13. **Security Hardening** - Input validation, rate limiting, honeypot anti-bot on feedback form
 14. **Tutorial & Help System** - First-time tutorial with guided first merge, confetti celebration, and "Stuck?" help
+15. **Game Over & Share System** - Full-screen game over with hero pig, locale-formatted scores, image sharing via html2canvas, View Board feature

@@ -57,6 +57,103 @@ function getPig(value) {
     return PIGS[value] || { tier: 0, name: '?', color: '#ccc' };
 }
 
+// Get the next pig after a given value (returns null for THE LION PIG)
+function getNextPig(value) {
+    const currentIndex = PIG_VALUES.indexOf(value);
+    if (currentIndex === -1 || currentIndex >= PIG_VALUES.length - 1) {
+        return null; // No next pig (already at max or invalid)
+    }
+    return PIGS[PIG_VALUES[currentIndex + 1]];
+}
+
+// ========== SHARE SYSTEM ==========
+const ShareSystem = {
+    // Check if Web Share API is available
+    canNativeShare() {
+        return navigator.share !== undefined;
+    },
+
+    // Check if can share files (not just text)
+    canShareFiles() {
+        if (!navigator.canShare) return false;
+        const testFile = new File(['test'], 'test.png', { type: 'image/png' });
+        return navigator.canShare({ files: [testFile] });
+    },
+
+    // Generate share image using html2canvas
+    async captureShareCard(shareCardEl) {
+        if (typeof html2canvas === 'undefined') {
+            console.warn('html2canvas not loaded');
+            return null;
+        }
+
+        try {
+            // Temporarily make visible for capture
+            shareCardEl.style.left = '0';
+            shareCardEl.style.zIndex = '9999';
+
+            const canvas = await html2canvas(shareCardEl, {
+                backgroundColor: null,
+                scale: 2, // Higher quality
+                useCORS: true,
+                allowTaint: true,
+                logging: false
+            });
+
+            // Hide again
+            shareCardEl.style.left = '-9999px';
+            shareCardEl.style.zIndex = '';
+
+            return new Promise((resolve) => {
+                canvas.toBlob(resolve, 'image/png');
+            });
+        } catch (e) {
+            console.warn('Could not capture share card:', e);
+            shareCardEl.style.left = '-9999px';
+            shareCardEl.style.zIndex = '';
+            return null;
+        }
+    },
+
+    // Share with Web Share API (native)
+    async nativeShare(text, blob = null) {
+        const shareData = { text };
+
+        if (blob && this.canShareFiles()) {
+            shareData.files = [new File([blob], 'powers-of-pig.png', { type: 'image/png' })];
+        }
+
+        try {
+            await navigator.share(shareData);
+            return 'completed';
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                return 'cancelled';
+            }
+            throw e;
+        }
+    },
+
+    // Fallback: copy text to clipboard
+    async copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (e) {
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            const success = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return success;
+        }
+    }
+};
+
 // Local storage keys
 const STORAGE_KEY = 'powersOfPig';
 const TUTORIAL_COMPLETE_KEY = 'pop_tutorial_complete';
@@ -279,6 +376,9 @@ class Game {
         this.stuckHintVisible = false;
         this.hintArrowTimer = null;
 
+        // Captured board state for game over screen
+        this.capturedBoardState = null;
+
         // Unlocked pigs (badges)
         this.unlockedPigs = new Set();
 
@@ -328,7 +428,8 @@ class Game {
         this.overlays = {
             pause: document.getElementById('pause-overlay'),
             restart: document.getElementById('restart-overlay'),
-            feedback: document.getElementById('feedback-overlay')
+            feedback: document.getElementById('feedback-overlay'),
+            'view-board': document.getElementById('view-board-overlay')
         };
 
         // Feedback modal elements
@@ -349,6 +450,23 @@ class Game {
         this.badgeGrid = document.getElementById('badge-grid');
         this.collectionProgress = document.getElementById('collection-progress');
         this.soundButton = document.getElementById('sound-button');
+
+        // Game over screen elements (new)
+        this.gameoverPigImage = document.getElementById('gameover-pig-image');
+        this.gameoverPigName = document.getElementById('gameover-pig-name');
+        this.gameoverTier = document.getElementById('gameover-tier');
+        this.gameoverScoreValue = document.getElementById('gameover-score-value');
+        this.gameoverSharePreview = document.getElementById('gameover-share-preview');
+
+        // Share card elements (for image capture)
+        this.shareCard = document.getElementById('share-card');
+        this.shareCardPig = document.getElementById('share-card-pig');
+        this.shareCardScore = document.getElementById('share-card-score');
+        this.shareCardMessage = document.getElementById('share-card-message');
+
+        // View board elements
+        this.viewBoardGrid = document.getElementById('view-board-grid');
+        this.viewBoardTiles = document.getElementById('view-board-tiles');
     }
 
     // Show a specific screen
@@ -1397,8 +1515,8 @@ class Game {
 
     // Show game over screen
     showGameOverScreen() {
-        // Prepare game over screen data
-        this.finalScoreElement.textContent = this.score;
+        // Capture board state FIRST before any changes
+        this.captureBoardState();
 
         const highestValue = this.getHighestPig();
         const pig = getPig(highestValue);
@@ -1423,17 +1541,59 @@ class Game {
         // Sad haptic feedback
         hapticsSystem.vibrateGameOver();
 
+        // Populate new game over screen
+        this.gameoverPigImage.src = pig.image;
+        this.gameoverPigImage.alt = localizedName;
+        this.gameoverPigName.textContent = localizedName;
+        this.gameoverScoreValue.textContent = formatNumber(this.score);
+        this.gameoverTier.textContent = strings.gameOverNew.tierIndicator(pig.tier, 17);
+
+        // Show crown for tier 17 (THE LION PIG)
+        const crown = document.getElementById('gameover-crown');
+        if (crown) {
+            if (pig.tier === 17) {
+                crown.classList.remove('hidden');
+            } else {
+                crown.classList.add('hidden');
+            }
+        }
+
+        // Share message preview
+        const shareMessage = getShareMessage(localizedName, this.score);
+        this.gameoverSharePreview.textContent = `"${shareMessage}"`;
+
+        // Populate share card (for image capture)
+        this.populateShareCard(pig, localizedName);
+
+        // Backward compatibility: also update old elements
+        this.finalScoreElement.textContent = this.score;
         this.highestPigBadge.textContent = localizedName;
         this.highestPigBadge.style.backgroundColor = pig.color || '';
         if (highestValue === 131072) {
             this.highestPigBadge.style.background = 'linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6)';
         }
-
-        // Hide new pig message for now (will implement in persistence phase)
         this.newPigMessage.style.display = 'none';
 
         // Show feedback modal first, then game over screen
         this.showFeedbackModal('gameOver');
+    }
+
+    // Capture current board state for "View Board" feature
+    captureBoardState() {
+        this.capturedBoardState = {
+            grid: this.grid.map(row => row.map(tile =>
+                tile ? { value: tile.value, row: tile.row, col: tile.col } : null
+            )),
+            score: this.score,
+            highestValue: this.getHighestPig()
+        };
+    }
+
+    // Populate share card for image generation
+    populateShareCard(pig, localizedName) {
+        this.shareCardPig.src = pig.image;
+        this.shareCardScore.textContent = formatNumber(this.score);
+        this.shareCardMessage.textContent = getShareMessage(localizedName, this.score);
     }
 
     // Show feedback modal
@@ -1532,11 +1692,174 @@ class Game {
 
         // Handle based on context
         if (this.feedbackContext === 'gameOver') {
+            // Track game over screen viewed
+            const highestValue = this.capturedBoardState ? this.capturedBoardState.highestValue : this.getHighestPig();
+            const pig = getPig(highestValue);
+            Analytics.track('game_over_screen_viewed', {
+                highest_tier: pig.tier,
+                score: this.score
+            });
             this.showScreen('gameover');
         }
         // For 'inGame' context, just close - return to current game
 
         this.feedbackContext = null;
+    }
+
+    // Handle share button click
+    async handleShare(context = 'gameOver') {
+        const strings = getStrings();
+        const highestValue = context === 'gameOver' && this.capturedBoardState
+            ? this.capturedBoardState.highestValue
+            : this.getHighestPig();
+        const pig = getPig(highestValue);
+        const localizedName = strings.pigs[pig.tier] || pig.name;
+        const scoreToShare = context === 'gameOver' && this.capturedBoardState
+            ? this.capturedBoardState.score
+            : this.score;
+
+        // Generate share message based on context
+        let shareMessage;
+        if (context === 'gameOver') {
+            shareMessage = getShareMessage(localizedName, scoreToShare);
+        } else {
+            shareMessage = getMidGameShareMessage(this.score);
+        }
+
+        const fullMessage = `${shareMessage}\n\n${strings.share.cta} → ${strings.share.ctaUrl}`;
+
+        // Track share initiated
+        Analytics.track('share_initiated', {
+            context,
+            method: ShareSystem.canNativeShare() ? 'native' : 'clipboard',
+            highest_tier: pig.tier,
+            score: scoreToShare
+        });
+
+        try {
+            if (ShareSystem.canNativeShare()) {
+                // Try to capture share card image (only for game over)
+                let imageBlob = null;
+                if (context === 'gameOver' && this.shareCard) {
+                    imageBlob = await ShareSystem.captureShareCard(this.shareCard);
+                }
+
+                const result = await ShareSystem.nativeShare(fullMessage, imageBlob);
+
+                if (result === 'completed') {
+                    Analytics.track('share_completed', { context, method: 'native' });
+                } else if (result === 'cancelled') {
+                    Analytics.track('share_cancelled', { context });
+                }
+            } else {
+                // Fallback to clipboard
+                const success = await ShareSystem.copyToClipboard(fullMessage);
+
+                if (success) {
+                    Analytics.track('share_completed', { context, method: 'clipboard' });
+                    this.showToast(strings.share.copiedToClipboard);
+                } else {
+                    this.showToast(strings.share.shareError);
+                }
+            }
+        } catch (e) {
+            console.warn('Share failed:', e);
+            // Fallback to clipboard
+            const success = await ShareSystem.copyToClipboard(fullMessage);
+            if (success) {
+                Analytics.track('share_completed', { context, method: 'clipboard_fallback' });
+                this.showToast(strings.share.copiedToClipboard);
+            }
+        }
+    }
+
+    // Show toast notification
+    showToast(message) {
+        // Check if toast already exists
+        let toast = document.querySelector('.share-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.className = 'share-toast';
+            document.body.appendChild(toast);
+        }
+
+        toast.textContent = message;
+        toast.classList.add('active');
+
+        setTimeout(() => {
+            toast.classList.remove('active');
+        }, 2000);
+    }
+
+    // Show frozen board view
+    showViewBoard() {
+        if (!this.capturedBoardState) return;
+
+        Analytics.track('view_board_clicked', {
+            highest_tier: getPig(this.capturedBoardState.highestValue).tier,
+            score: this.capturedBoardState.score
+        });
+
+        // Create background cells
+        this.viewBoardGrid.innerHTML = '';
+        for (let i = 0; i < 16; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            this.viewBoardGrid.appendChild(cell);
+        }
+
+        // Render captured tiles
+        this.viewBoardTiles.innerHTML = '';
+        const grid = this.capturedBoardState.grid;
+
+        for (let row = 0; row < this.size; row++) {
+            for (let col = 0; col < this.size; col++) {
+                const tile = grid[row][col];
+                if (tile) {
+                    this.renderViewBoardTile(tile);
+                }
+            }
+        }
+
+        this.showOverlay('view-board');
+    }
+
+    // Render a single tile in view board
+    renderViewBoardTile(tile) {
+        const pig = getPig(tile.value);
+        const strings = getStrings();
+        const localizedName = strings.pigs[pig.tier] || pig.name;
+
+        const element = document.createElement('div');
+        element.className = `tile tile-${tile.value}`;
+        element.style.gridColumn = tile.col + 1;
+        element.style.gridRow = tile.row + 1;
+
+        if (pig.color) {
+            element.style.backgroundColor = pig.color;
+        }
+        if (tile.value === 131072) {
+            element.style.background = 'linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6)';
+        }
+
+        const imgEl = document.createElement('img');
+        imgEl.className = 'tile-image';
+        imgEl.src = pig.image;
+        imgEl.alt = localizedName;
+        imgEl.draggable = false;
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'tile-name';
+        nameEl.textContent = localizedName;
+
+        element.appendChild(imgEl);
+        element.appendChild(nameEl);
+        this.viewBoardTiles.appendChild(element);
+    }
+
+    // Hide view board
+    hideViewBoard() {
+        this.hideOverlay('view-board');
     }
 
     // Get device type for feedback
@@ -1784,6 +2107,26 @@ class Game {
 
         document.getElementById('gameover-home-button').addEventListener('click', () => {
             this.showScreen('home');
+        });
+
+        // Share button (game over screen)
+        document.getElementById('share-button').addEventListener('click', () => {
+            this.handleShare('gameOver');
+        });
+
+        // View board button
+        document.getElementById('view-board-button').addEventListener('click', () => {
+            this.showViewBoard();
+        });
+
+        // View board close button
+        document.getElementById('view-board-close').addEventListener('click', () => {
+            this.hideViewBoard();
+        });
+
+        // Mid-game share button
+        document.getElementById('share-mid-game-button').addEventListener('click', () => {
+            this.handleShare('midGame');
         });
 
         // Feedback modal buttons

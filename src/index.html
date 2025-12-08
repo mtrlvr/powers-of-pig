@@ -47,6 +47,7 @@
             <div class="header-buttons">
                 <button class="icon-btn" id="undo-button" title="Undo">↩️</button>
                 <button class="icon-btn" id="sound-button" title="Sound">🔊</button>
+                <button class="icon-btn" id="share-mid-game-button" title="Share">📤</button>
                 <button class="icon-btn" id="pause-button" title="Pause">⏸️</button>
                 <button class="lang-toggle lang-toggle-header" aria-label="Toggle language">EN</button>
             </div>
@@ -114,24 +115,71 @@
         </div>
     </div>
 
-    <!-- GAME OVER SCREEN -->
-    <div class="screen gameover-screen" id="gameover-screen">
+    <!-- GAME OVER SCREEN (New Full-Screen Layout) -->
+    <div class="screen gameover-screen-new" id="gameover-screen">
         <button class="lang-toggle" aria-label="Toggle language">EN</button>
-        <h2 data-i18n="gameOver.title">Game Over!</h2>
-        <div class="final-score">
-            <span data-i18n="gameOver.score">Score:</span>
+
+        <!-- Hero Section -->
+        <div class="gameover-hero">
+            <div class="gameover-pig-display">
+                <img class="gameover-pig-image" id="gameover-pig-image" src="" alt="">
+                <div class="gameover-crown hidden" id="gameover-crown">👑</div>
+            </div>
+            <div class="gameover-pig-name" id="gameover-pig-name"></div>
+            <div class="gameover-tier" id="gameover-tier"></div>
+        </div>
+
+        <!-- Score Section -->
+        <div class="gameover-score-section">
+            <div class="gameover-final-score">
+                <span data-i18n="gameOver.score">Score:</span>
+                <span id="gameover-score-value">0</span>
+            </div>
+            <div class="gameover-share-preview" id="gameover-share-preview"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="gameover-buttons">
+            <button class="btn btn-primary btn-share" id="share-button">
+                <span class="share-icon">📤</span>
+                <span data-i18n="share.buttonLabel">Share</span>
+            </button>
+            <button class="btn btn-secondary" id="play-again-button" data-i18n="gameOver.playAgain">Play Again</button>
+            <div class="gameover-secondary-buttons">
+                <button class="btn btn-tertiary" id="view-board-button" data-i18n="share.viewBoard">View Board</button>
+                <button class="btn btn-tertiary" id="gameover-home-button" data-i18n="gameOver.home">Home</button>
+            </div>
+        </div>
+
+        <!-- Hidden elements for backward compatibility -->
+        <div style="display:none;">
             <span id="final-score">0</span>
+            <div id="highest-pig-badge"></div>
+            <div id="new-pig-message"><div id="new-pig-badge"></div></div>
         </div>
-        <div class="highest-pig">
-            <span data-i18n="gameOver.highestPig">Highest pig:</span>
-            <div class="pig-badge" id="highest-pig-badge"></div>
+    </div>
+
+    <!-- VIEW BOARD OVERLAY -->
+    <div class="overlay" id="view-board-overlay">
+        <div class="view-board-modal">
+            <button class="icon-btn view-board-close" id="view-board-close">←</button>
+            <div class="view-board-container">
+                <div class="grid-background view-board-grid" id="view-board-grid"></div>
+                <div class="tile-container view-board-tiles" id="view-board-tiles"></div>
+            </div>
         </div>
-        <div class="new-pig-unlocked" id="new-pig-message" style="display: none;">
-            <p data-i18n="gameOver.newPig">New pig discovered!</p>
-            <div class="pig-badge" id="new-pig-badge"></div>
+    </div>
+
+    <!-- SHARE CARD (Hidden, for html2canvas capture) -->
+    <div class="share-card" id="share-card">
+        <div class="share-card-content">
+            <img class="share-card-pig" id="share-card-pig" src="" alt="">
+            <div class="share-card-score" id="share-card-score"></div>
+            <div class="share-card-message" id="share-card-message"></div>
+            <div class="share-card-cta">
+                <span data-i18n="share.cta">Play now</span> → <span data-i18n="share.ctaUrl">powersofpig.com</span>
+            </div>
         </div>
-        <button class="btn btn-primary" id="play-again-button" data-i18n="gameOver.playAgain">Play Again</button>
-        <button class="btn btn-secondary" id="gameover-home-button" data-i18n="gameOver.home">Home</button>
     </div>
 
     <!-- WIN SCREEN -->
@@ -158,6 +206,7 @@
         <div class="badge-grid" id="badge-grid"></div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="strings.js"></script>
     <script src="game.js"></script>
 </body>

@@ -622,6 +622,274 @@ body {
     100% { transform: scale(1); }
 }
 
+/* ========== NEW GAME OVER SCREEN ========== */
+.gameover-screen-new {
+    gap: 24px;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 30px 20px;
+}
+
+.gameover-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.gameover-pig-display {
+    position: relative;
+    width: 160px;
+    height: 160px;
+}
+
+.gameover-pig-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+}
+
+.gameover-crown {
+    position: absolute;
+    bottom: -10px;
+    right: -20px;
+    font-size: 2.5rem;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    animation: crown-bounce 1s ease-in-out infinite;
+}
+
+.gameover-crown.hidden {
+    display: none;
+}
+
+@keyframes crown-bounce {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50% { transform: translateY(-5px) rotate(5deg); }
+}
+
+.gameover-pig-name {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #5a6f52;
+    text-align: center;
+}
+
+.gameover-tier {
+    font-size: 1rem;
+    color: #8a9a82;
+    font-weight: 500;
+}
+
+.gameover-score-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.gameover-final-score {
+    font-size: 1.4rem;
+    color: #5a6f52;
+    display: flex;
+    gap: 8px;
+    font-weight: 600;
+}
+
+#gameover-score-value {
+    font-weight: 700;
+}
+
+.gameover-share-preview {
+    font-size: 0.9rem;
+    color: #8a9a82;
+    text-align: center;
+    font-style: italic;
+    max-width: 280px;
+    line-height: 1.4;
+}
+
+.gameover-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 280px;
+}
+
+.btn-share {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.share-icon {
+    font-size: 1.2rem;
+}
+
+.gameover-secondary-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    width: 100%;
+}
+
+.btn-tertiary {
+    padding: 8px 4px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+    color: #6b7d63;
+    cursor: pointer;
+    transition: color 0.2s, transform 0.15s;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.btn-tertiary:hover {
+    color: #5a6f52;
+}
+
+.btn-tertiary:active {
+    transform: scale(0.97);
+}
+
+/* ========== VIEW BOARD OVERLAY ========== */
+.view-board-modal {
+    background: linear-gradient(145deg, #d4e4d1 0%, #b8d4b0 50%, #a8c8a0 100%);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+}
+
+.view-board-close {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
+.view-board-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    max-width: 400px;
+    background: #8b7355;
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: 0 8px 24px rgba(80, 60, 40, 0.35);
+}
+
+.view-board-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 12px;
+    width: 100%;
+    height: 100%;
+}
+
+.view-board-tiles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 12px;
+    padding: 12px;
+}
+
+/* ========== SHARE CARD (for html2canvas capture) ========== */
+.share-card {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    width: 400px;
+    height: 500px;
+    background: linear-gradient(145deg, #e8f0e6 0%, #d4e4d1 100%);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.share-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+}
+
+.share-card-pig {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.25));
+}
+
+.share-card-score {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #5a6f52;
+}
+
+.share-card-message {
+    font-size: 1.1rem;
+    color: #6b7d63;
+    line-height: 1.4;
+    max-width: 320px;
+}
+
+.share-card-cta {
+    margin-top: 10px;
+    padding: 10px 24px;
+    background: linear-gradient(to bottom, #85b87a, #6b9a60);
+    color: white;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(107, 154, 96, 0.4);
+}
+
+/* ========== TOAST NOTIFICATION ========== */
+.share-toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(90, 111, 82, 0.95);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.share-toast.active {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
 /* ========== WIN SCREEN ========== */
 .win-message {
     font-size: 1.2rem;
@@ -823,6 +1091,55 @@ body {
     .lang-toggle-header {
         padding: 6px 8px;
         font-size: 0.7rem;
+    }
+
+    /* New game over screen mobile */
+    .gameover-pig-display {
+        width: 130px;
+        height: 130px;
+    }
+
+    .gameover-next-pig {
+        right: -20px;
+    }
+
+    .next-pig-silhouette {
+        width: 40px;
+        height: 40px;
+    }
+
+    .gameover-pig-name {
+        font-size: 1.5rem;
+    }
+
+    .gameover-crown {
+        font-size: 2rem;
+        right: -15px;
+    }
+
+    /* Share card mobile */
+    .share-card {
+        width: 320px;
+        height: 420px;
+    }
+
+    .share-card-pig {
+        width: 140px;
+        height: 140px;
+    }
+
+    /* View board mobile */
+    .view-board-grid,
+    .view-board-tiles {
+        gap: 8px;
+    }
+
+    .view-board-container {
+        padding: 8px;
+    }
+
+    .view-board-tiles {
+        padding: 8px;
     }
 }
 

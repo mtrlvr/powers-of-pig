@@ -106,6 +106,22 @@ const STRINGS = {
         // Help System
         help: {
             stuck: 'Stuck?'
+        },
+
+        // Share System
+        share: {
+            buttonLabel: 'Share',
+            viewBoard: 'View Board',
+            copiedToClipboard: 'Copied to clipboard!',
+            shareError: 'Could not share',
+            cta: 'Play now',
+            ctaUrl: 'powersofpig.com',
+            nextPig: 'Next:'
+        },
+
+        // New Game Over Screen
+        gameOverNew: {
+            tierIndicator: (current, total) => `Tier ${current} of ${total}`
         }
     },
 
@@ -212,6 +228,22 @@ const STRINGS = {
         // Help System
         help: {
             stuck: 'Bloqué ?'
+        },
+
+        // Share System
+        share: {
+            buttonLabel: 'Partager',
+            viewBoard: 'Voir le plateau',
+            copiedToClipboard: 'Copié !',
+            shareError: 'Impossible de partager',
+            cta: 'Joue maintenant',
+            ctaUrl: 'powersofpig.com',
+            nextPig: 'Suivant :'
+        },
+
+        // New Game Over Screen
+        gameOverNew: {
+            tierIndicator: (current, total) => `Niveau ${current} sur ${total}`
         }
     }
 };
@@ -247,7 +279,35 @@ function toggleLanguage() {
     setLanguage(current === 'en' ? 'fr' : 'en');
 }
 
+// Format number with locale-appropriate separators
+// EN: 1,234 (comma)
+// FR: 1 234 (narrow no-break space U+202F)
+function formatNumber(num) {
+    const lang = getCurrentLanguage();
+    return new Intl.NumberFormat(lang === 'fr' ? 'fr-FR' : 'en-US').format(num);
+}
+
+// Generate share message for game over
+function getShareMessage(pigName, score) {
+    const lang = getCurrentLanguage();
+    const formattedScore = formatNumber(score);
+    if (lang === 'fr') {
+        return `J'ai atteint ${pigName} et marqué ${formattedScore} points. Est-ce que tu peux faire mieux ?`;
+    }
+    return `I reached ${pigName} and scored ${formattedScore}. Can you beat me?`;
+}
+
+// Generate share message for mid-game
+function getMidGameShareMessage(score) {
+    const lang = getCurrentLanguage();
+    const formattedScore = formatNumber(score);
+    if (lang === 'fr') {
+        return `${formattedScore} points, série en cours !`;
+    }
+    return `${formattedScore} points and counting!`;
+}
+
 // Export for use in game.js (or use directly if loaded via script tag)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { STRINGS, getCurrentLanguage, setLanguage, getStrings, toggleLanguage };
+    module.exports = { STRINGS, getCurrentLanguage, setLanguage, getStrings, toggleLanguage, formatNumber, getShareMessage, getMidGameShareMessage };
 }
