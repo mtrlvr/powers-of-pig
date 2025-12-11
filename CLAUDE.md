@@ -28,7 +28,7 @@ src/
 
 - **Single-page app** with vanilla HTML/CSS/JavaScript (no frameworks)
 - **Game class** in game.js handles all game state, logic, and rendering
-- **Grid-based rendering** - CSS Grid for both background cells AND tile positioning (no JS pixel math)
+- **Tile animation system** - Tiles use absolute positioning with CSS transforms for smooth sliding animations
 - **Touch + keyboard input** - swipe detection (with threshold) and arrow keys
 - **Sound system** - Preloaded MP3 files with 17 unique oink sounds per tier
 - **Haptics** - Vibration API patterns synced with sounds on supported devices
@@ -38,16 +38,32 @@ src/
 ## Development Philosophy
 
 **Keep it simple.** This is a casual mobile game - avoid over-engineering:
-- Let CSS handle layout (Grid, Flexbox) instead of calculating pixels in JS
 - Don't add abstractions until they're clearly needed
 - Test on mobile early and often - mobile browsers behave differently
 
 ## Key Implementation Details
 
-### Tile Positioning
-Tiles use **CSS Grid placement** (`grid-column` and `grid-row`) - NOT JavaScript pixel calculations. Both `.grid-background` (cells) and `.tile-container` (tiles) use identical CSS Grid layouts, so tiles automatically align perfectly on all screen sizes and browsers.
+### Tile Positioning & Animation System
+Tiles use **absolute positioning with CSS transforms** (`transform: translate(x, y)`) for smooth sliding animations.
 
-**Important lesson learned:** Don't overcomplicate tile positioning with JS measurements (`getBoundingClientRect`, `getComputedStyle`, etc.). CSS Grid handles responsive layouts natively - just place tiles in grid cells and let CSS do the work.
+**Architecture:**
+- Each tile has a unique `id` (auto-incrementing counter)
+- `tileElements` Map tracks tile ID → DOM element for persistence across renders
+- `cellPositions` cache stores pixel positions measured from actual `.cell` elements
+- `isAnimating` flag blocks input during 120ms slide animations
+
+**How it works:**
+1. `calculateCellPositions()` measures actual grid cell positions via `getBoundingClientRect()`
+2. `render()` creates/updates/removes tile DOM elements based on tile IDs (no `innerHTML` clearing)
+3. `move()` captures old positions, runs game logic, then calls `animateTileMovements()`
+4. CSS `transition: transform 120ms cubic-bezier(0.25, 1, 0.5, 1)` handles smooth animation
+
+**Key timing consideration:** The game screen has a 250ms `fadeInScale` CSS animation with `transform: scale()`. Cell positions must be measured AFTER this animation completes, otherwise `getBoundingClientRect()` returns scaled values. The `showScreen('game')` uses a 270ms `setTimeout` before calling `render()`.
+
+**Animation classes use `scale` property (not `transform: scale()`)** to avoid overriding the position transform:
+- `.tile.new` - spawn animation
+- `.tile.merged` - merge pop animation
+- `.tile.celebration-scale` - first merge celebration
 
 ### Sound System (Web Audio API)
 Sound uses the **Web Audio API** (`AudioContext` + `AudioBuffer`) instead of `HTMLAudioElement` for iOS compatibility. iOS requires audio to be unlocked during a user gesture - the `AudioContext` is created when the user taps the Play button, which properly unlocks it. Sounds are preloaded as `AudioBuffer` objects and played via `BufferSourceNode`. The `audioContext.resume()` call handles iOS suspending audio when the app goes to background.
@@ -233,3 +249,4 @@ Full-screen game over experience with shareable content for viral growth.
 13. **Security Hardening** - Input validation, rate limiting, honeypot anti-bot on feedback form
 14. **Tutorial & Help System** - First-time tutorial with guided first merge, confetti celebration, and "Stuck?" help
 15. **Game Over & Share System** - Full-screen game over with hero pig, locale-formatted scores, image sharing via html2canvas, View Board feature
+16. **Tile Sliding Animation** - Smooth 120ms CSS transform animations for tile movement, DOM persistence via tile IDs, async move() with animation blocking

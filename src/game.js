@@ -379,6 +379,11 @@ class Game {
         // Captured board state for game over screen
         this.capturedBoardState = null;
 
+        // Tile animation system
+        this.nextTileId = 0;
+        this.tileElements = new Map(); // tileId → HTMLElement
+        this.isAnimating = false;
+
         // Unlocked pigs (badges)
         this.unlockedPigs = new Set();
 
@@ -483,14 +488,13 @@ class Game {
         }
 
         // Recalculate dimensions when showing game screen
-        // Use double requestAnimationFrame to ensure CSS Grid layout is complete on mobile
+        // Wait for the screen's fadeInScale animation (250ms) to complete before measuring
+        // The animation uses transform: scale() which affects getBoundingClientRect() values
         if (screenName === 'game') {
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    this.calculateDimensions();
-                    this.render();
-                });
-            });
+            setTimeout(() => {
+                this.calculateDimensions();
+                this.render();
+            }, 270); // 250ms animation + small buffer
         }
 
         // Populate collection screen
@@ -520,7 +524,45 @@ class Game {
 
     // No longer needed - CSS Grid handles all positioning
     calculateDimensions() {
-        // Kept for compatibility with existing calls
+        // Invalidate cell positions cache so they're recalculated on next render
+        this.cellPositions = null;
+    }
+
+    // Calculate cell positions for tile placement by measuring actual grid cells
+    calculateCellPositions() {
+        const cells = this.gridBackground.querySelectorAll('.cell');
+        if (cells.length !== 16) {
+            console.error('Expected 16 cells, found', cells.length);
+            return null;
+        }
+
+        const containerRect = this.tileContainer.getBoundingClientRect();
+        const positions = [];
+
+        for (let row = 0; row < 4; row++) {
+            positions[row] = [];
+            for (let col = 0; col < 4; col++) {
+                const cellIndex = row * 4 + col;
+                const cellRect = cells[cellIndex].getBoundingClientRect();
+
+                positions[row][col] = {
+                    x: cellRect.left - containerRect.left,
+                    y: cellRect.top - containerRect.top,
+                    size: cellRect.width
+                };
+            }
+        }
+
+        this.cellPositions = positions;
+        return positions;
+    }
+
+    // Get position for a specific cell
+    getCellPosition(row, col) {
+        if (!this.cellPositions || this.cellPositions.length === 0) {
+            this.calculateCellPositions();
+        }
+        return this.cellPositions[row][col];
     }
 
     // Start a new game
@@ -543,7 +585,11 @@ class Game {
         // Clear any active timers
         this.clearInactivityTimer();
 
+        // Clear tile elements for fresh start
         this.tileContainer.innerHTML = '';
+        this.tileElements.clear();
+        this.cellPositions = null;
+
         this.createBackgroundCells();
 
         // Check if tutorial should run (first-time player)
@@ -566,7 +612,7 @@ class Game {
 
         this.updateScore();
         this.showScreen('game');
-        this.render();
+        // Note: render() is called by showScreen('game') after layout is complete
     }
 
     // Create the empty cell backgrounds
@@ -593,9 +639,26 @@ class Game {
     undo() {
         if (!this.previousState || this.gameOver) return;
 
+        // Clear tile elements for fresh render
+        this.tileContainer.innerHTML = '';
+        this.tileElements.clear();
+
+        // Restore grid state
         this.grid = this.previousState.grid;
         this.score = this.previousState.score;
         this.previousState = null;
+
+        // Reassign IDs to all tiles (they were shallow-copied, need new IDs for DOM tracking)
+        for (let row = 0; row < this.size; row++) {
+            for (let col = 0; col < this.size; col++) {
+                const tile = this.grid[row][col];
+                if (tile) {
+                    tile.id = this.nextTileId++;
+                    tile.isNew = false;
+                    tile.merged = false;
+                }
+            }
+        }
 
         this.updateScore();
         this.render();
@@ -619,6 +682,7 @@ class Game {
         const value = Math.random() < 0.9 ? 2 : 4;
 
         this.grid[row][col] = {
+            id: this.nextTileId++,
             value,
             row,
             col,
@@ -652,8 +716,8 @@ class Game {
         this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
 
         // Place two Pips in bottom row, adjacent - swipe RIGHT to merge
-        this.grid[3][1] = { value: 2, row: 3, col: 1, isNew: true, merged: false };
-        this.grid[3][2] = { value: 2, row: 3, col: 2, isNew: true, merged: false };
+        this.grid[3][1] = { id: this.nextTileId++, value: 2, row: 3, col: 1, isNew: true, merged: false };
+        this.grid[3][2] = { id: this.nextTileId++, value: 2, row: 3, col: 2, isNew: true, merged: false };
 
         this.tutorialDirection = 'right';
         this.tutorialActive = true;
@@ -1176,19 +1240,46 @@ class Game {
         return highest;
     }
 
-    // Render all tiles to the DOM
+    // Render all tiles to the DOM (with DOM persistence for animations)
     render() {
-        this.tileContainer.innerHTML = '';
+        // Ensure positions are calculated
+        if (!this.cellPositions || this.cellPositions.length === 0) {
+            this.calculateCellPositions();
+        }
 
+        // Track which tiles should exist
+        const currentTileIds = new Set();
+
+        // Update or create tiles
         for (let row = 0; row < this.size; row++) {
             for (let col = 0; col < this.size; col++) {
                 const tile = this.grid[row][col];
                 if (tile) {
-                    this.renderTile(tile);
+                    currentTileIds.add(tile.id);
+
+                    let element = this.tileElements.get(tile.id);
+                    if (!element) {
+                        // Create new element
+                        element = this.createTileElement(tile);
+                        this.tileElements.set(tile.id, element);
+                        this.tileContainer.appendChild(element);
+                    } else {
+                        // Update existing element
+                        this.updateTileElement(element, tile);
+                    }
                 }
             }
         }
 
+        // Remove tiles no longer in grid
+        for (const [tileId, element] of this.tileElements) {
+            if (!currentTileIds.has(tileId)) {
+                element.remove();
+                this.tileElements.delete(tileId);
+            }
+        }
+
+        // Clear animation flags after delay
         setTimeout(() => {
             for (let row = 0; row < this.size; row++) {
                 for (let col = 0; col < this.size; col++) {
@@ -1199,25 +1290,22 @@ class Game {
                     }
                 }
             }
-        }, 200);
+            // Also remove animation classes from DOM elements
+            this.tileElements.forEach(el => {
+                el.classList.remove('new', 'merged');
+            });
+        }, 300);
     }
 
-    // Render a single tile
-    renderTile(tile) {
+    // Create a new tile DOM element
+    createTileElement(tile) {
         const pig = getPig(tile.value);
         const strings = getStrings();
-        // Get localized pig name
         const localizedName = strings.pigs[pig.tier] || pig.name;
 
         const element = document.createElement('div');
         element.className = `tile tile-${tile.value}`;
-
-        if (tile.isNew) element.classList.add('new');
-        if (tile.merged) element.classList.add('merged');
-
-        // Use CSS Grid placement (1-indexed)
-        element.style.gridColumn = tile.col + 1;
-        element.style.gridRow = tile.row + 1;
+        element.dataset.tileId = tile.id;
 
         if (pig.color) {
             element.style.backgroundColor = pig.color;
@@ -1236,12 +1324,146 @@ class Game {
 
         element.appendChild(imgEl);
         element.appendChild(nameEl);
-        this.tileContainer.appendChild(element);
+
+        // Set position using transforms (for animation)
+        const pos = this.getCellPosition(tile.row, tile.col);
+        element.style.width = pos.size + 'px';
+        element.style.height = pos.size + 'px';
+        element.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+
+        // Animation classes
+        if (tile.isNew) element.classList.add('new');
+        if (tile.merged) element.classList.add('merged');
+
+        return element;
+    }
+
+    // Update an existing tile DOM element
+    updateTileElement(element, tile) {
+        const pig = getPig(tile.value);
+        const strings = getStrings();
+        const localizedName = strings.pigs[pig.tier] || pig.name;
+
+        // Update classes for value change (after merge)
+        element.className = `tile tile-${tile.value}`;
+        if (tile.isNew) element.classList.add('new');
+        if (tile.merged) element.classList.add('merged');
+
+        // Update background color
+        if (pig.color) {
+            element.style.backgroundColor = pig.color;
+        }
+
+        // Update image if value changed
+        const imgEl = element.querySelector('.tile-image');
+        if (imgEl && imgEl.src !== pig.image) {
+            imgEl.src = pig.image;
+            imgEl.alt = localizedName;
+        }
+
+        // Update name
+        const nameEl = element.querySelector('.tile-name');
+        if (nameEl) {
+            nameEl.textContent = localizedName;
+        }
+
+        // Update position
+        const pos = this.getCellPosition(tile.row, tile.col);
+        element.style.width = pos.size + 'px';
+        element.style.height = pos.size + 'px';
+        element.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+    }
+
+    // Animate tiles from old positions to new positions
+    // mergeInfo: array of { tileId, targetRow, targetCol } for tiles that merged
+    async animateTileMovements(oldPositions, mergeInfo) {
+        const animations = [];
+        const ANIMATION_DURATION = 120;
+
+        // Collect IDs of merged tiles for later removal
+        const mergedTileIds = new Set(mergeInfo.map(m => m.tileId));
+
+        // Animate each tile that moved to its new position (non-merged tiles)
+        for (let row = 0; row < this.size; row++) {
+            for (let col = 0; col < this.size; col++) {
+                const tile = this.grid[row][col];
+                if (!tile) continue;
+
+                const element = this.tileElements.get(tile.id);
+                if (!element) continue;
+
+                const oldPos = oldPositions.get(tile.id);
+                if (!oldPos || (oldPos.row === row && oldPos.col === col)) {
+                    continue; // Tile didn't move
+                }
+
+                // Create animation promise
+                const promise = new Promise(resolve => {
+                    const newPos = this.getCellPosition(row, col);
+
+                    const onTransitionEnd = (e) => {
+                        if (e.propertyName === 'transform') {
+                            element.removeEventListener('transitionend', onTransitionEnd);
+                            resolve();
+                        }
+                    };
+                    element.addEventListener('transitionend', onTransitionEnd);
+
+                    // Set new transform to trigger animation
+                    element.style.transform = `translate(${newPos.x}px, ${newPos.y}px)`;
+
+                    // Fallback timeout in case transitionend doesn't fire
+                    setTimeout(resolve, ANIMATION_DURATION + 30);
+                });
+
+                animations.push(promise);
+            }
+        }
+
+        // Animate merged source tiles to their merge target positions
+        for (const { tileId, targetRow, targetCol } of mergeInfo) {
+            const element = this.tileElements.get(tileId);
+            if (!element) continue;
+
+            const mergeTargetPos = this.getCellPosition(targetRow, targetCol);
+
+            const promise = new Promise(resolve => {
+                const onTransitionEnd = (e) => {
+                    if (e.propertyName === 'transform') {
+                        element.removeEventListener('transitionend', onTransitionEnd);
+                        resolve();
+                    }
+                };
+                element.addEventListener('transitionend', onTransitionEnd);
+
+                // Animate to merge position
+                element.style.transform = `translate(${mergeTargetPos.x}px, ${mergeTargetPos.y}px)`;
+
+                // Fallback timeout
+                setTimeout(resolve, ANIMATION_DURATION + 30);
+            });
+
+            animations.push(promise);
+        }
+
+        // Wait for all animations to complete
+        if (animations.length > 0) {
+            await Promise.all(animations);
+        }
+
+        // Remove merged source tiles from DOM after animation
+        for (const tileId of mergedTileIds) {
+            const element = this.tileElements.get(tileId);
+            if (element) {
+                element.remove();
+                this.tileElements.delete(tileId);
+            }
+        }
     }
 
     // Move tiles in a direction
-    move(direction) {
-        if (this.gameOver || this.currentScreen !== 'game') return;
+    async move(direction) {
+        if (this.gameOver || this.currentScreen !== 'game' || this.isAnimating) return;
 
         // Reset inactivity timer on any move attempt
         this.resetInactivityTimer();
@@ -1257,8 +1479,20 @@ class Game {
         // Save state before move (for undo)
         this.saveState();
 
+        // Capture old positions for animation
+        const oldPositions = new Map();
+        for (let row = 0; row < this.size; row++) {
+            for (let col = 0; col < this.size; col++) {
+                const tile = this.grid[row][col];
+                if (tile) {
+                    oldPositions.set(tile.id, { row, col });
+                }
+            }
+        }
+
         let moved = false;
         let highestMergeTier = 0;  // Track highest tier pig created from merges
+        const mergeInfo = [];  // Track tiles that will be merged: { tileId, targetRow, targetCol }
 
         // Reset merged flags
         for (let row = 0; row < this.size; row++) {
@@ -1273,7 +1507,7 @@ class Game {
             for (let row = 0; row < this.size; row++) {
                 for (let col = 1; col < this.size; col++) {
                     if (this.grid[row][col]) {
-                        const result = this.moveTile(row, col, 0, -1);
+                        const result = this.moveTile(row, col, 0, -1, mergeInfo);
                         moved = result.moved || moved;
                         highestMergeTier = Math.max(highestMergeTier, result.mergeTier);
                     }
@@ -1283,7 +1517,7 @@ class Game {
             for (let row = 0; row < this.size; row++) {
                 for (let col = this.size - 2; col >= 0; col--) {
                     if (this.grid[row][col]) {
-                        const result = this.moveTile(row, col, 0, 1);
+                        const result = this.moveTile(row, col, 0, 1, mergeInfo);
                         moved = result.moved || moved;
                         highestMergeTier = Math.max(highestMergeTier, result.mergeTier);
                     }
@@ -1293,7 +1527,7 @@ class Game {
             for (let col = 0; col < this.size; col++) {
                 for (let row = 1; row < this.size; row++) {
                     if (this.grid[row][col]) {
-                        const result = this.moveTile(row, col, -1, 0);
+                        const result = this.moveTile(row, col, -1, 0, mergeInfo);
                         moved = result.moved || moved;
                         highestMergeTier = Math.max(highestMergeTier, result.mergeTier);
                     }
@@ -1303,7 +1537,7 @@ class Game {
             for (let col = 0; col < this.size; col++) {
                 for (let row = this.size - 2; row >= 0; row--) {
                     if (this.grid[row][col]) {
-                        const result = this.moveTile(row, col, 1, 0);
+                        const result = this.moveTile(row, col, 1, 0, mergeInfo);
                         moved = result.moved || moved;
                         highestMergeTier = Math.max(highestMergeTier, result.mergeTier);
                     }
@@ -1311,63 +1545,71 @@ class Game {
             }
         }
 
-        if (moved) {
-            // Increment move counter for analytics
-            this.moveCount++;
-
-            // Play sound/haptic for highest tier merge only (if any merges occurred)
-            if (highestMergeTier > 0) {
-                soundSystem.playOink(highestMergeTier);
-                hapticsSystem.vibrateForTier(highestMergeTier);
-
-                // First merge celebration (only once ever)
-                if (!this.isFirstMergeCelebrated()) {
-                    this.showFirstMergeCelebration();
-                }
-            }
-
-            // Advance tutorial if active
-            if (this.tutorialActive) {
-                this.advanceTutorial();
-            }
-
-            this.spawnTile();
-            this.render();
-
-            // Check for win (only show once)
-            if (!this.won && this.checkWin()) {
-                this.won = true;
-                this.unlockPig(this.winValue);
-                this.updateHighScore();
-                setTimeout(() => this.showWinScreen(), 300);
-            }
-            // Check for game over
-            else if (this.checkGameOver()) {
-                this.gameOver = true;
-                this.updateHighScore();
-
-                // If still in tutorial, mark it complete
-                if (this.tutorialActive) {
-                    this.completeTutorial();
-                }
-
-                setTimeout(() => this.showGameOverScreen(), 300);
-            }
-        } else {
+        if (!moved) {
             // No move happened, discard saved state
             this.previousState = null;
+            return;
         }
+
+        // Animate tile movements
+        this.isAnimating = true;
+        await this.animateTileMovements(oldPositions, mergeInfo);
+
+        // Increment move counter for analytics
+        this.moveCount++;
+
+        // Play sound/haptic for highest tier merge only (if any merges occurred)
+        if (highestMergeTier > 0) {
+            soundSystem.playOink(highestMergeTier);
+            hapticsSystem.vibrateForTier(highestMergeTier);
+
+            // First merge celebration (only once ever)
+            if (!this.isFirstMergeCelebrated()) {
+                this.showFirstMergeCelebration();
+            }
+        }
+
+        // Advance tutorial if active
+        if (this.tutorialActive) {
+            this.advanceTutorial();
+        }
+
+        this.spawnTile();
+        this.render();
+
+        // Check for win (only show once)
+        if (!this.won && this.checkWin()) {
+            this.won = true;
+            this.unlockPig(this.winValue);
+            this.updateHighScore();
+            setTimeout(() => this.showWinScreen(), 300);
+        }
+        // Check for game over
+        else if (this.checkGameOver()) {
+            this.gameOver = true;
+            this.updateHighScore();
+
+            // If still in tutorial, mark it complete
+            if (this.tutorialActive) {
+                this.completeTutorial();
+            }
+
+            setTimeout(() => this.showGameOverScreen(), 300);
+        }
+
+        this.isAnimating = false;
     }
 
     // Move a single tile as far as possible in the given direction
     // Returns { moved: boolean, mergeTier: number } where mergeTier is 0 if no merge
-    moveTile(row, col, rowDir, colDir) {
+    moveTile(row, col, rowDir, colDir, mergeInfo = []) {
         const tile = this.grid[row][col];
         if (!tile) return { moved: false, mergeTier: 0 };
 
         let newRow = row;
         let newCol = col;
         let merged = false;
+        let targetTile = null;
 
         while (true) {
             const nextRow = newRow + rowDir;
@@ -1386,6 +1628,7 @@ class Game {
                 newRow = nextRow;
                 newCol = nextCol;
                 merged = true;
+                targetTile = nextTile;
                 break;
             } else {
                 break;
@@ -1396,8 +1639,13 @@ class Game {
             this.grid[row][col] = null;
 
             if (merged) {
+                // Track both source tiles for animation with their target merge position
+                mergeInfo.push({ tileId: tile.id, targetRow: newRow, targetCol: newCol });
+                mergeInfo.push({ tileId: targetTile.id, targetRow: newRow, targetCol: newCol });
+
                 const newValue = tile.value * 2;
                 this.grid[newRow][newCol] = {
+                    id: this.nextTileId++,  // New merged tile gets new ID
                     value: newValue,
                     row: newRow,
                     col: newCol,
@@ -2225,8 +2473,35 @@ class Game {
         // Handle window resize
         window.addEventListener('resize', () => {
             if (this.currentScreen === 'game') {
-                this.calculateDimensions();
-                this.render();
+                // Invalidate position cache
+                this.cellPositions = null;
+
+                // Recalculate positions
+                this.calculateCellPositions();
+
+                // Update all tile positions without animation
+                for (const [tileId, element] of this.tileElements) {
+                    // Find tile in grid
+                    for (let row = 0; row < this.size; row++) {
+                        for (let col = 0; col < this.size; col++) {
+                            const tile = this.grid[row][col];
+                            if (tile && tile.id === tileId) {
+                                const pos = this.getCellPosition(row, col);
+
+                                // Disable transition temporarily
+                                element.style.transition = 'none';
+                                element.style.width = pos.size + 'px';
+                                element.style.height = pos.size + 'px';
+                                element.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+
+                                // Force reflow and restore transition
+                                element.offsetHeight;
+                                element.style.transition = '';
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         });
     }
