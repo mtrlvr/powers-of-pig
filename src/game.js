@@ -263,6 +263,18 @@ class SoundSystem {
 // Global sound system instance
 const soundSystem = new SoundSystem();
 
+// ========== IMAGE PRELOADING ==========
+// Preload all pig images to prevent delay on first appearance
+function preloadPigImages() {
+    Object.values(PIGS).forEach(pig => {
+        const img = new Image();
+        img.src = pig.image;
+    });
+}
+
+// Preload images immediately when script loads
+preloadPigImages();
+
 // ========== HAPTICS SYSTEM (Vibration API) ==========
 // NOTE: Haptics are always enabled, independent of sound toggle
 class HapticsSystem {
@@ -488,13 +500,14 @@ class Game {
         }
 
         // Recalculate dimensions when showing game screen
-        // Wait for the screen's fadeInScale animation (250ms) to complete before measuring
-        // The animation uses transform: scale() which affects getBoundingClientRect() values
+        // Use requestAnimationFrame to ensure DOM is ready after display: flex is applied
         if (screenName === 'game') {
-            setTimeout(() => {
-                this.calculateDimensions();
-                this.render();
-            }, 270); // 250ms animation + small buffer
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    this.calculateDimensions();
+                    this.render();
+                });
+            });
         }
 
         // Populate collection screen
@@ -528,7 +541,9 @@ class Game {
         this.cellPositions = null;
     }
 
-    // Calculate cell positions for tile placement by measuring actual grid cells
+    // Calculate cell positions for tile placement
+    // cell.offsetLeft/offsetTop are relative to board-container
+    // tile-container is inset by board-container's padding, so subtract it
     calculateCellPositions() {
         const cells = this.gridBackground.querySelectorAll('.cell');
         if (cells.length !== 16) {
@@ -536,19 +551,27 @@ class Game {
             return null;
         }
 
-        const containerRect = this.tileContainer.getBoundingClientRect();
+        // tile-container is inset from board-container by this padding
+        // so cell positions need this subtracted
+        const boardStyle = getComputedStyle(this.gridBackground.parentElement);
+        const paddingLeft = parseFloat(boardStyle.paddingLeft) || 0;
+        const paddingTop = parseFloat(boardStyle.paddingTop) || 0;
+
         const positions = [];
 
         for (let row = 0; row < 4; row++) {
             positions[row] = [];
             for (let col = 0; col < 4; col++) {
                 const cellIndex = row * 4 + col;
-                const cellRect = cells[cellIndex].getBoundingClientRect();
+                const cell = cells[cellIndex];
 
+                // cell.offset* is relative to board-container
+                // Subtract padding since tile-container starts inside the padding
                 positions[row][col] = {
-                    x: cellRect.left - containerRect.left,
-                    y: cellRect.top - containerRect.top,
-                    size: cellRect.width
+                    x: cell.offsetLeft - paddingLeft,
+                    y: cell.offsetTop - paddingTop,
+                    width: cell.offsetWidth,
+                    height: cell.offsetHeight
                 };
             }
         }
@@ -1327,8 +1350,8 @@ class Game {
 
         // Set position using transforms (for animation)
         const pos = this.getCellPosition(tile.row, tile.col);
-        element.style.width = pos.size + 'px';
-        element.style.height = pos.size + 'px';
+        element.style.width = pos.width + 'px';
+        element.style.height = pos.height + 'px';
         element.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
 
         // Animation classes
@@ -1369,8 +1392,8 @@ class Game {
 
         // Update position
         const pos = this.getCellPosition(tile.row, tile.col);
-        element.style.width = pos.size + 'px';
-        element.style.height = pos.size + 'px';
+        element.style.width = pos.width + 'px';
+        element.style.height = pos.height + 'px';
         element.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
     }
 
@@ -2490,8 +2513,8 @@ class Game {
 
                                 // Disable transition temporarily
                                 element.style.transition = 'none';
-                                element.style.width = pos.size + 'px';
-                                element.style.height = pos.size + 'px';
+                                element.style.width = pos.width + 'px';
+                                element.style.height = pos.height + 'px';
                                 element.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
 
                                 // Force reflow and restore transition

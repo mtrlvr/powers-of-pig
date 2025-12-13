@@ -53,12 +53,17 @@ Tiles use **absolute positioning with CSS transforms** (`transform: translate(x,
 - `isAnimating` flag blocks input during 120ms slide animations
 
 **How it works:**
-1. `calculateCellPositions()` measures actual grid cell positions via `getBoundingClientRect()`
+1. `calculateCellPositions()` measures cell positions using `offsetLeft`/`offsetTop`/`offsetWidth`/`offsetHeight`
 2. `render()` creates/updates/removes tile DOM elements based on tile IDs (no `innerHTML` clearing)
 3. `move()` captures old positions, runs game logic, then calls `animateTileMovements()`
 4. CSS `transition: transform 120ms cubic-bezier(0.25, 1, 0.5, 1)` handles smooth animation
 
-**Key timing consideration:** The game screen has a 250ms `fadeInScale` CSS animation with `transform: scale()`. Cell positions must be measured AFTER this animation completes, otherwise `getBoundingClientRect()` returns scaled values. The `showScreen('game')` uses a 270ms `setTimeout` before calling `render()`.
+**Critical mobile alignment details:**
+- **DO NOT use `getBoundingClientRect()`** for position measurement - it returns viewport-scaled values on mobile browsers which causes misalignment
+- Use `offsetLeft`/`offsetTop` which return layout pixels unaffected by viewport scaling
+- `.tile-container` must be inset by the same padding as `.board-container` (12px desktop, 8px mobile) so it occupies the exact same space as `.grid-background`
+- Cell positions are measured relative to `.board-container`, then the padding is subtracted since tiles are positioned within the inset `.tile-container`
+- Tile dimensions use **both** `cell.offsetWidth` AND `cell.offsetHeight` separately - cells may not be perfectly square on all devices
 
 **Animation classes use `scale` property (not `transform: scale()`)** to avoid overriding the position transform:
 - `.tile.new` - spawn animation

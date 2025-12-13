@@ -26,29 +26,21 @@ body {
     flex-direction: column;
     align-items: center;
     opacity: 0;
-    transform: scale(0.95);
-    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    transition: opacity 0.2s ease-out;
 }
 
 .screen.active {
     display: flex;
     opacity: 1;
-    transform: scale(1);
     animation: fadeInScale 0.25s ease-out;
 }
 
 @keyframes fadeInScale {
     0% {
         opacity: 0;
-        transform: scale(0.92);
-    }
-    60% {
-        opacity: 1;
-        transform: scale(1.02);
     }
     100% {
         opacity: 1;
-        transform: scale(1);
     }
 }
 
@@ -265,11 +257,10 @@ body {
 
 .tile-container {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 12px;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
 }
 
 /* ========== TILES ========== */
@@ -313,11 +304,11 @@ body {
 }
 
 .tile.new {
-    animation: appear 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: appear 0.2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .tile.merged {
-    animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: pop 0.2s cubic-bezier(0.25, 1, 0.5, 1);
     z-index: 10;
 }
 
@@ -325,10 +316,6 @@ body {
     0% {
         opacity: 0;
         scale: 0;
-    }
-    70% {
-        opacity: 1;
-        scale: 1.05;
     }
     100% {
         opacity: 1;
@@ -340,8 +327,8 @@ body {
     0% {
         scale: 1;
     }
-    40% {
-        scale: 1.1;
+    50% {
+        scale: 1.05;
     }
     100% {
         scale: 1;
@@ -1038,7 +1025,10 @@ body {
     }
 
     .tile-container {
-        padding: 8px;
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
     }
 
     .tile {
@@ -1141,6 +1131,7 @@ body {
     .view-board-tiles {
         padding: 8px;
     }
+
 }
 
 /* ========== LANGUAGE TOGGLE ========== */
@@ -1508,4 +1499,70 @@ body {
 @keyframes hint-pulse {
     0%, 100% { opacity: 0.7; }
     50% { opacity: 1; }
+}
+
+/* ========== MOBILE TUTORIAL & HINT ARROWS ========== */
+/* Must come after base arrow rules to properly override positioning */
+@media (max-width: 520px) {
+    /* Tutorial arrows - position inside the board on mobile */
+    .tutorial-arrow {
+        width: 50px;
+        height: 50px;
+        font-size: 2.5rem;
+    }
+
+    .tutorial-arrow-right {
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .tutorial-arrow-left {
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .tutorial-arrow-up {
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .tutorial-arrow-down {
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    /* Hint arrows - position inside the board on mobile */
+    .hint-arrow {
+        width: 45px;
+        height: 45px;
+        font-size: 2rem;
+    }
+
+    .hint-arrow-right {
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .hint-arrow-left {
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .hint-arrow-up {
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .hint-arrow-down {
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
 }
