@@ -803,7 +803,8 @@ body {
 .share-card {
     position: fixed;
     left: -9999px;
-    top: 0;
+    top: -9999px;
+    pointer-events: none;
     width: 400px;
     height: 500px;
     background: linear-gradient(145deg, #e8f0e6 0%, #d4e4d1 100%);

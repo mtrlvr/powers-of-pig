@@ -224,7 +224,7 @@ Full-screen game over experience with shareable content for viral growth.
 
 **Key Components:**
 - `ShareSystem` object: `canNativeShare()`, `captureShareCard()`, `nativeShare()`, `copyToClipboard()`
-- `#share-card`: Hidden off-screen element for html2canvas capture
+- `#share-card`: Hidden off-screen element (`left: -9999px`) for html2canvas capture - **DO NOT move on-screen during capture** as html2canvas can capture off-screen elements directly
 - `#view-board-overlay`: Modal for viewing final board state
 - `#share-mid-game-button`: Header button for mid-game sharing
 

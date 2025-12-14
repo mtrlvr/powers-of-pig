@@ -88,10 +88,7 @@ const ShareSystem = {
         }
 
         try {
-            // Temporarily make visible for capture
-            shareCardEl.style.left = '0';
-            shareCardEl.style.zIndex = '9999';
-
+            // html2canvas can capture off-screen elements directly
             const canvas = await html2canvas(shareCardEl, {
                 backgroundColor: null,
                 scale: 2, // Higher quality
@@ -100,17 +97,11 @@ const ShareSystem = {
                 logging: false
             });
 
-            // Hide again
-            shareCardEl.style.left = '-9999px';
-            shareCardEl.style.zIndex = '';
-
             return new Promise((resolve) => {
                 canvas.toBlob(resolve, 'image/png');
             });
         } catch (e) {
             console.warn('Could not capture share card:', e);
-            shareCardEl.style.left = '-9999px';
-            shareCardEl.style.zIndex = '';
             return null;
         }
     },
