@@ -149,6 +149,7 @@ const ShareSystem = {
 const STORAGE_KEY = 'powersOfPig';
 const TUTORIAL_COMPLETE_KEY = 'pop_tutorial_complete';
 const FIRST_MERGE_CELEBRATED_KEY = 'pop_first_merge_celebrated';
+const CAMPAIGN_STORAGE_KEY = 'pop_campaign';
 
 // ========== SOUND SYSTEM (Web Audio API for iOS compatibility) ==========
 class SoundSystem {
@@ -382,6 +383,25 @@ class Game {
         // Captured board state for game over screen
         this.capturedBoardState = null;
 
+        // Campaign mode state
+        this.campaignMode = false;
+        this.currentLevel = null;
+        this.currentWorldId = 1;
+        this.levelMoves = 0;
+        this.levelMerges = 0;
+        this.levelStartTime = null;
+        this.usedUndo = false;
+        this.tierReachedCount = {}; // Track how many times each tier was reached (for reach_tier_count goal)
+        this.campaignProgress = {
+            completedLevels: {},
+            currentLevel: 1
+        };
+
+        // Timer state (for time_limit modifier)
+        this.timerInterval = null;
+        this.timeRemaining = null;
+        this.moveLimit = null; // for move_limit modifier
+
         // Tile animation system
         this.nextTileId = 0;
         this.tileElements = new Map(); // tileId → HTMLElement
@@ -429,7 +449,9 @@ class Game {
             game: document.getElementById('game-screen'),
             gameover: document.getElementById('gameover-screen'),
             win: document.getElementById('win-screen'),
-            collection: document.getElementById('collection-screen')
+            collection: document.getElementById('collection-screen'),
+            'world-select': document.getElementById('world-select-screen'),
+            'level-select': document.getElementById('level-select-screen')
         };
 
         // Overlays
@@ -437,7 +459,9 @@ class Game {
             pause: document.getElementById('pause-overlay'),
             restart: document.getElementById('restart-overlay'),
             feedback: document.getElementById('feedback-overlay'),
-            'view-board': document.getElementById('view-board-overlay')
+            'view-board': document.getElementById('view-board-overlay'),
+            'level-complete': document.getElementById('level-complete-overlay'),
+            'level-failed': document.getElementById('level-failed-overlay')
         };
 
         // Feedback modal elements
@@ -447,6 +471,7 @@ class Game {
         this.feedbackSkipBtn = document.getElementById('feedback-skip');
 
         // Game elements
+        this.boardContainer = document.querySelector('.board-container');
         this.tileContainer = document.getElementById('tile-container');
         this.gridBackground = document.getElementById('grid-background');
         this.scoreElement = document.getElementById('score');
@@ -475,6 +500,39 @@ class Game {
         // View board elements
         this.viewBoardGrid = document.getElementById('view-board-grid');
         this.viewBoardTiles = document.getElementById('view-board-tiles');
+
+        // Campaign elements
+        this.worldGrid = document.getElementById('world-grid');
+        this.levelGrid = document.getElementById('level-grid');
+        this.levelSelectWorldName = document.getElementById('level-select-world-name');
+        this.campaignHeader = document.getElementById('campaign-header');
+        this.campaignLevelNumber = document.getElementById('campaign-level-number');
+        this.campaignLevelName = document.getElementById('campaign-level-name');
+        this.campaignGoal = document.getElementById('campaign-goal');
+        this.campaignStats = document.getElementById('campaign-stats');
+        this.campaignMovesElement = document.getElementById('campaign-moves');
+        this.campaignMergesElement = document.getElementById('campaign-merges');
+        this.campaignStatMerges = document.getElementById('campaign-stat-merges');
+        this.campaignTimerElement = document.getElementById('campaign-timer');
+        this.campaignStatTimer = document.getElementById('campaign-stat-timer');
+        this.endlessButton = document.getElementById('endless-button');
+        this.endlessLockedText = document.getElementById('endless-locked-text');
+
+        // Level complete overlay elements
+        this.levelCompleteScoreValue = document.getElementById('level-complete-score-value');
+        this.pigUnlockSection = document.getElementById('pig-unlock-section');
+        this.pigUnlockImage = document.getElementById('pig-unlock-image');
+        this.pigUnlockName = document.getElementById('pig-unlock-name');
+        this.pigUnlockQuote = document.getElementById('pig-unlock-quote');
+
+        // Emoji feedback elements
+        this.emojiFeedback = document.getElementById('emoji-feedback');
+        this.emojiFeedbackThanks = document.getElementById('emoji-feedback-thanks');
+        this.emojiFeedbackButtons = document.querySelectorAll('.emoji-btn');
+
+        // Level failed overlay elements
+        this.levelFailedProgress = document.getElementById('level-failed-progress');
+        this.levelFailedTip = document.getElementById('level-failed-tip');
     }
 
     // Show a specific screen
@@ -537,8 +595,9 @@ class Game {
     // tile-container is inset by board-container's padding, so subtract it
     calculateCellPositions() {
         const cells = this.gridBackground.querySelectorAll('.cell');
-        if (cells.length !== 16) {
-            console.error('Expected 16 cells, found', cells.length);
+        const expectedCells = this.size * this.size;
+        if (cells.length !== expectedCells) {
+            console.error(`Expected ${expectedCells} cells, found`, cells.length);
             return null;
         }
 
@@ -550,10 +609,10 @@ class Game {
 
         const positions = [];
 
-        for (let row = 0; row < 4; row++) {
+        for (let row = 0; row < this.size; row++) {
             positions[row] = [];
-            for (let col = 0; col < 4; col++) {
-                const cellIndex = row * 4 + col;
+            for (let col = 0; col < this.size; col++) {
+                const cellIndex = row * this.size + col;
                 const cell = cells[cellIndex];
 
                 // cell.offset* is relative to board-container
@@ -579,12 +638,20 @@ class Game {
         return this.cellPositions[row][col];
     }
 
-    // Start a new game
+    // Start a new game (endless mode)
     startGame() {
         // Initialize sound on first user interaction
         soundSystem.init();
         soundSystem.setEnabled(this.soundEnabled);
         // Haptics are always on, independent of sound toggle
+
+        // Ensure campaign mode is off for endless
+        this.campaignMode = false;
+        this.currentLevel = null;
+
+        // Reset to standard 4x4 grid for endless mode
+        this.size = 4;
+        this.boardContainer.setAttribute('data-size', '4');
 
         this.score = 0;
         this.gameOver = false;
@@ -605,6 +672,9 @@ class Game {
         this.cellPositions = null;
 
         this.createBackgroundCells();
+
+        // Hide campaign UI elements
+        this.updateCampaignUI();
 
         // Check if tutorial should run (first-time player)
         if (!this.isTutorialComplete()) {
@@ -652,6 +722,11 @@ class Game {
     // Undo last move
     undo() {
         if (!this.previousState || this.gameOver) return;
+
+        // Track undo usage for campaign analytics
+        if (this.campaignMode) {
+            this.usedUndo = true;
+        }
 
         // Clear tile elements for fresh render
         this.tileContainer.innerHTML = '';
@@ -1572,13 +1647,39 @@ class Game {
         // Increment move counter for analytics
         this.moveCount++;
 
+        // Campaign mode: increment level move counter and track merges
+        if (this.campaignMode) {
+            this.levelMoves++;
+            if (highestMergeTier > 0) {
+                this.levelMerges++;
+                // Track tier reached count for reach_tier_count goal
+                if (!this.tierReachedCount[highestMergeTier]) {
+                    this.tierReachedCount[highestMergeTier] = 0;
+                }
+                this.tierReachedCount[highestMergeTier]++;
+            }
+            // Update campaign stats UI
+            if (this.moveLimit !== null) {
+                this.campaignMovesElement.textContent = `${this.levelMoves}/${this.moveLimit}`;
+            } else {
+                this.campaignMovesElement.textContent = this.levelMoves;
+            }
+            this.campaignMergesElement.textContent = this.levelMerges;
+
+            // Check if move limit exceeded
+            if (this.moveLimit !== null && this.levelMoves >= this.moveLimit) {
+                // Exceeded move limit - will check for goal after spawning
+                // If goal not met, fail the level
+            }
+        }
+
         // Play sound/haptic for highest tier merge only (if any merges occurred)
         if (highestMergeTier > 0) {
             soundSystem.playOink(highestMergeTier);
             hapticsSystem.vibrateForTier(highestMergeTier);
 
-            // First merge celebration (only once ever)
-            if (!this.isFirstMergeCelebrated()) {
+            // First merge celebration (only once ever, not in campaign)
+            if (!this.campaignMode && !this.isFirstMergeCelebrated()) {
                 this.showFirstMergeCelebration();
             }
         }
@@ -1591,8 +1692,25 @@ class Game {
         this.spawnTile();
         this.render();
 
-        // Check for win (only show once)
-        if (!this.won && this.checkWin()) {
+        // Campaign mode: check for level goal completion
+        if (this.campaignMode && this.checkLevelGoal()) {
+            this.gameOver = true;
+            setTimeout(() => this.completeCampaignLevel(), 300);
+            this.isAnimating = false;
+            return;
+        }
+
+        // Campaign mode: check for move limit exceeded (after goal check)
+        if (this.campaignMode && this.moveLimit !== null && this.levelMoves >= this.moveLimit) {
+            // Move limit reached and goal not met - fail
+            this.gameOver = true;
+            setTimeout(() => this.failCampaignLevel('move_limit'), 300);
+            this.isAnimating = false;
+            return;
+        }
+
+        // Check for win (only show once, only in endless mode)
+        if (!this.campaignMode && !this.won && this.checkWin()) {
             this.won = true;
             this.unlockPig(this.winValue);
             this.updateHighScore();
@@ -1601,14 +1719,21 @@ class Game {
         // Check for game over
         else if (this.checkGameOver()) {
             this.gameOver = true;
-            this.updateHighScore();
 
-            // If still in tutorial, mark it complete
-            if (this.tutorialActive) {
-                this.completeTutorial();
+            if (this.campaignMode) {
+                // Campaign mode: show failure screen
+                setTimeout(() => this.failCampaignLevel(), 300);
+            } else {
+                // Endless mode: show game over screen
+                this.updateHighScore();
+
+                // If still in tutorial, mark it complete
+                if (this.tutorialActive) {
+                    this.completeTutorial();
+                }
+
+                setTimeout(() => this.showGameOverScreen(), 300);
             }
-
-            setTimeout(() => this.showGameOverScreen(), 300);
         }
 
         this.isAnimating = false;
@@ -2263,6 +2388,498 @@ class Game {
         }
     }
 
+    // ========== CAMPAIGN MODE METHODS ==========
+
+    // Show campaign (go directly to level select for World 1)
+    showCampaign() {
+        this.showLevelSelect(1);
+    }
+
+    // Show level select screen for a specific world
+    showLevelSelect(worldId) {
+        this.currentWorldId = worldId;
+        this.renderLevelSelect(worldId);
+        this.showScreen('level-select');
+    }
+
+    // Render level select buttons for a world
+    renderLevelSelect(worldId) {
+        const strings = getStrings();
+        const lang = getCurrentLanguage();
+        const world = getWorldById(worldId);
+        const levels = getLevelsForWorld(worldId);
+        const completedCount = getCompletedLevelCount(this.campaignProgress);
+
+        // Update header
+        this.levelSelectWorldName.textContent = world.name[lang] || world.name.en;
+
+        this.levelGrid.innerHTML = '';
+
+        for (const level of levels) {
+            const isUnlocked = isLevelUnlocked(level.id, this.campaignProgress);
+            const completion = this.campaignProgress.completedLevels[level.id];
+
+            const button = document.createElement('button');
+            button.className = `level-button ${isUnlocked ? '' : 'locked'} ${completion ? 'completed' : ''}`;
+
+            if (isUnlocked) {
+                button.innerHTML = `
+                    <div class="level-number">${level.id}</div>
+                    ${completion ? '<div class="level-checkmark">✓</div>' : ''}
+                `;
+                button.addEventListener('click', () => {
+                    this.startCampaignLevel(level.id);
+                });
+            } else {
+                button.innerHTML = `
+                    <div class="level-lock-icon">🔒</div>
+                `;
+            }
+
+            this.levelGrid.appendChild(button);
+        }
+    }
+
+    // Start a campaign level
+    startCampaignLevel(levelId) {
+        const level = getLevelById(levelId);
+        if (!level) return;
+
+        this.campaignMode = true;
+        this.currentLevel = level;
+        this.currentWorldId = level.world;
+        this.levelMoves = 0;
+        this.levelMerges = 0;
+        this.levelStartTime = Date.now();
+        this.usedUndo = false;
+        this.tierReachedCount = {};
+
+        // Clear any previous level timer
+        this.stopLevelTimer();
+
+        // Check for modifiers
+        this.timeRemaining = null;
+        this.moveLimit = null;
+        this.size = 4; // Default size
+
+        if (level.modifiers && level.modifiers.length > 0) {
+            for (const mod of level.modifiers) {
+                if (mod.type === 'time_limit') {
+                    this.timeRemaining = mod.seconds;
+                }
+                if (mod.type === 'move_limit') {
+                    this.moveLimit = mod.moves;
+                }
+                if (mod.type === 'small_board') {
+                    this.size = mod.size || 3;
+                }
+            }
+        }
+
+        // Initialize sound on first user interaction
+        soundSystem.init();
+        soundSystem.setEnabled(this.soundEnabled);
+
+        // Reset game state
+        this.score = 0;
+        this.gameOver = false;
+        this.won = false;
+        this.keepPlaying = false;
+        this.previousState = null;
+        this.moveCount = 0;
+
+        // Clear any active timers
+        this.clearInactivityTimer();
+
+        // Clear tile elements for fresh start
+        this.tileContainer.innerHTML = '';
+        this.tileElements.clear();
+        this.cellPositions = null;
+
+        // Update board container for different grid sizes
+        this.boardContainer.setAttribute('data-size', this.size);
+
+        this.createBackgroundCells();
+
+        // Standard grid setup (no tutorial in campaign)
+        this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
+        this.tutorialActive = false;
+        this.spawnTile();
+        this.spawnTile();
+
+        // Show campaign UI elements
+        this.updateCampaignUI();
+
+        // Start timer if time limit modifier is active
+        if (this.timeRemaining !== null) {
+            this.startLevelTimer();
+        }
+
+        // Track level start
+        Analytics.track('campaign_level_start', {
+            level_id: level.id,
+            level_name: level.name.en,
+            world: level.world
+        });
+
+        this.updateScore();
+        this.showScreen('game');
+    }
+
+    // Update campaign-specific UI elements
+    updateCampaignUI() {
+        const strings = getStrings();
+        const lang = getCurrentLanguage();
+
+        if (this.campaignMode && this.currentLevel) {
+            // Show campaign header
+            this.campaignHeader.classList.add('visible');
+            this.campaignStats.classList.add('visible');
+
+            // Update level info
+            this.campaignLevelNumber.textContent = `${strings.campaign.level} ${this.currentLevel.id}`;
+            this.campaignLevelName.textContent = this.currentLevel.name[lang] || this.currentLevel.name.en;
+            this.campaignGoal.textContent = this.currentLevel.goal.description[lang] || this.currentLevel.goal.description.en;
+
+            // Update move display - show limit if move_limit modifier active
+            if (this.moveLimit !== null) {
+                this.campaignMovesElement.textContent = `${this.levelMoves}/${this.moveLimit}`;
+            } else {
+                this.campaignMovesElement.textContent = this.levelMoves;
+            }
+            this.campaignMergesElement.textContent = this.levelMerges;
+
+            // Show merges counter for merge_count goals
+            if (this.currentLevel.goal.type === 'merge_count') {
+                this.campaignStatMerges.classList.add('visible');
+            } else {
+                this.campaignStatMerges.classList.remove('visible');
+            }
+
+            // Show/hide timer based on time_limit modifier
+            if (this.timeRemaining !== null) {
+                this.campaignStatTimer.classList.add('visible');
+                this.updateTimerDisplay();
+            } else {
+                this.campaignStatTimer.classList.remove('visible');
+            }
+        } else {
+            // Hide campaign header for endless mode
+            this.campaignHeader.classList.remove('visible');
+            this.campaignStats.classList.remove('visible');
+        }
+    }
+
+    // Start the level timer (for time_limit modifier)
+    startLevelTimer() {
+        this.updateTimerDisplay();
+        this.timerInterval = setInterval(() => {
+            this.timeRemaining--;
+            this.updateTimerDisplay();
+
+            if (this.timeRemaining <= 0) {
+                this.stopLevelTimer();
+                if (!this.gameOver) {
+                    this.gameOver = true;
+                    this.failCampaignLevel('time_out');
+                }
+            }
+        }, 1000);
+    }
+
+    // Stop the level timer
+    stopLevelTimer() {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+    }
+
+    // Update timer display
+    updateTimerDisplay() {
+        if (this.timeRemaining !== null) {
+            const minutes = Math.floor(this.timeRemaining / 60);
+            const seconds = this.timeRemaining % 60;
+            this.campaignTimerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+            // Add warning class when time is low
+            if (this.timeRemaining <= 10) {
+                this.campaignStatTimer.classList.add('warning');
+            } else {
+                this.campaignStatTimer.classList.remove('warning');
+            }
+        }
+    }
+
+    // Check if the current level goal is met (called after each move)
+    checkLevelGoal() {
+        if (!this.campaignMode || !this.currentLevel) return false;
+
+        const goal = this.currentLevel.goal;
+
+        switch (goal.type) {
+            case 'reach_tier': {
+                const targetValue = getTierValue(goal.value);
+                for (let row = 0; row < this.size; row++) {
+                    for (let col = 0; col < this.size; col++) {
+                        if (this.grid[row][col] && this.grid[row][col].value >= targetValue) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            case 'reach_tier_count': {
+                const targetValue = getTierValue(goal.value);
+                const count = this.tierReachedCount[goal.value] || 0;
+                return count >= goal.count;
+            }
+
+            case 'reach_score': {
+                return this.score >= goal.value;
+            }
+
+            case 'merge_count': {
+                return this.levelMerges >= goal.value;
+            }
+
+            case 'clear_tier': {
+                const targetValue = getTierValue(goal.value);
+                for (let row = 0; row < this.size; row++) {
+                    for (let col = 0; col < this.size; col++) {
+                        if (this.grid[row][col] && this.grid[row][col].value === targetValue) {
+                            return false; // Still has tiles of this tier
+                        }
+                    }
+                }
+                // Make sure we've played at least a few moves (can't win immediately)
+                return this.levelMoves > 0;
+            }
+
+            default:
+                return false;
+        }
+    }
+
+    // Complete the current campaign level
+    completeCampaignLevel() {
+        // Stop any active timer
+        this.stopLevelTimer();
+
+        const level = this.currentLevel;
+        const lang = getCurrentLanguage();
+        const strings = getStrings();
+        const timeSeconds = Math.floor((Date.now() - this.levelStartTime) / 1000);
+
+        // Save progress (only if not already completed, or if better score)
+        const prevCompletion = this.campaignProgress.completedLevels[level.id];
+        if (!prevCompletion || this.score > prevCompletion.bestScore) {
+            this.campaignProgress.completedLevels[level.id] = {
+                completed: true,
+                bestMoves: this.levelMoves,
+                bestScore: this.score,
+                bestTime: timeSeconds
+            };
+            this.saveCampaignProgress();
+        }
+
+        // Update endless mode button state (in case level 8 was just completed)
+        this.updateEndlessButtonState();
+
+        // Track completion
+        Analytics.track('level_completed', {
+            level_id: level.id,
+            level_name: level.name.en,
+            time_seconds: timeSeconds,
+            moves: this.levelMoves,
+            modifier: getLevelModifierType(level)
+        });
+
+        // Update score display
+        this.levelCompleteScoreValue.textContent = formatNumber(this.score);
+
+        // Handle pig unlock
+        if (level.unlocksPig) {
+            const pigValue = getTierValue(level.unlocksPig);
+            const isNewUnlock = this.unlockPig(pigValue);
+
+            if (isNewUnlock) {
+                const pig = getPig(pigValue);
+                const quote = PIG_UNLOCK_QUOTES[level.unlocksPig];
+
+                this.pigUnlockImage.src = pig.image;
+                this.pigUnlockName.textContent = strings.pigs[pig.tier] || pig.name;
+                this.pigUnlockQuote.textContent = quote[lang] || quote.en;
+                this.pigUnlockSection.classList.add('visible');
+            } else {
+                this.pigUnlockSection.classList.remove('visible');
+            }
+        } else {
+            this.pigUnlockSection.classList.remove('visible');
+        }
+
+        // Hide next button if this is the last level (8) or next level would be locked
+        const nextLevelButton = document.getElementById('next-level-button');
+        const nextLevelId = level.id + 1;
+        if (nextLevelId > 8) {
+            nextLevelButton.style.display = 'none';
+        } else {
+            nextLevelButton.style.display = 'block';
+        }
+
+        // Reset emoji feedback state
+        this.resetEmojiFeedback();
+
+        this.showOverlay('level-complete');
+    }
+
+    // Reset emoji feedback to initial state
+    resetEmojiFeedback() {
+        this.emojiFeedback.classList.remove('submitted');
+        this.emojiFeedbackThanks.classList.remove('visible');
+        this.emojiFeedbackButtons.forEach(btn => btn.classList.remove('selected'));
+    }
+
+    // Handle emoji feedback click
+    handleEmojiFeedback(btn) {
+        // Ignore if already submitted
+        if (this.emojiFeedback.classList.contains('submitted')) return;
+
+        const rating = parseInt(btn.dataset.rating);
+
+        // Mark as selected and submitted
+        this.emojiFeedbackButtons.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        this.emojiFeedback.classList.add('submitted');
+        this.emojiFeedbackThanks.classList.add('visible');
+
+        // Track via PostHog
+        Analytics.track('level_feedback', {
+            level_id: this.currentLevel.id,
+            level_name: this.currentLevel.name.en,
+            rating: rating,
+            rating_emoji: btn.textContent
+        });
+    }
+
+    // Fail the current campaign level (show "So Close!" screen)
+    failCampaignLevel(reason = 'no_moves') {
+        // Stop any active timer
+        this.stopLevelTimer();
+
+        const level = this.currentLevel;
+        const goal = level.goal;
+        const lang = getCurrentLanguage();
+
+        // Calculate progress for failure message
+        const progressMessage = this.getFailureProgressMessage(goal, lang);
+        const tip = this.getFailureTip(reason, lang);
+
+        this.levelFailedProgress.textContent = progressMessage;
+        this.levelFailedTip.textContent = tip;
+
+        // Track failure
+        Analytics.track('level_failed', {
+            level_id: level.id,
+            level_name: level.name.en,
+            time_seconds: Math.floor((Date.now() - this.levelStartTime) / 1000),
+            moves: this.levelMoves,
+            modifier: getLevelModifierType(level),
+            failure_reason: reason
+        });
+
+        this.showOverlay('level-failed');
+    }
+
+    // Get failure progress message based on goal type
+    getFailureProgressMessage(goal, lang) {
+        const messages = FAILURE_MESSAGES.progress;
+        const strings = getStrings();
+
+        switch (goal.type) {
+            case 'reach_tier': {
+                const highestValue = this.getHighestPig();
+                const highestTier = getPig(highestValue).tier;
+                const targetTier = goal.value;
+                const remaining = targetTier - highestTier;
+                const achievedName = strings.pigs[highestTier];
+                const targetName = strings.pigs[targetTier];
+
+                let msg = messages.reach_tier[lang] || messages.reach_tier.en;
+                return msg.replace('{achieved}', achievedName)
+                          .replace('{remaining}', remaining)
+                          .replace('{target}', targetName);
+            }
+
+            case 'reach_tier_count': {
+                const count = this.tierReachedCount[goal.value] || 0;
+                const remaining = goal.count - count;
+                const targetName = strings.pigs[goal.value];
+
+                let msg = messages.reach_tier_count[lang] || messages.reach_tier_count.en;
+                return msg.replace('{achieved}', count)
+                          .replace('{target}', goal.count)
+                          .replace('{remaining}', remaining);
+            }
+
+            case 'reach_score': {
+                const remaining = goal.value - this.score;
+                let msg = messages.reach_score[lang] || messages.reach_score.en;
+                return msg.replace('{achieved}', formatNumber(this.score))
+                          .replace('{remaining}', formatNumber(remaining));
+            }
+
+            case 'merge_count': {
+                const remaining = goal.value - this.levelMerges;
+                let msg = messages.merge_count[lang] || messages.merge_count.en;
+                return msg.replace('{achieved}', this.levelMerges)
+                          .replace('{remaining}', remaining);
+            }
+
+            case 'clear_tier': {
+                const targetValue = getTierValue(goal.value);
+                let count = 0;
+                for (let row = 0; row < this.size; row++) {
+                    for (let col = 0; col < this.size; col++) {
+                        if (this.grid[row][col] && this.grid[row][col].value === targetValue) {
+                            count++;
+                        }
+                    }
+                }
+                let msg = messages.clear_tier[lang] || messages.clear_tier.en;
+                return msg.replace('{remaining}', count);
+            }
+
+            default:
+                return '';
+        }
+    }
+
+    // Get contextual failure tip
+    getFailureTip(reason, lang) {
+        const tips = FAILURE_MESSAGES.tips;
+
+        // Use reason-specific tip if available
+        if (reason === 'time_out' && tips.time_out) {
+            return tips.time_out[lang] || tips.time_out.en;
+        }
+
+        if (reason === 'move_limit' && tips.move_limit) {
+            return tips.move_limit[lang] || tips.move_limit.en;
+        }
+
+        // If they were close (got to high tier), encourage them
+        const highestValue = this.getHighestPig();
+        const highestTier = getPig(highestValue).tier;
+        if (this.currentLevel.goal.type === 'reach_tier' && highestTier >= this.currentLevel.goal.value - 1) {
+            return tips.close[lang] || tips.close.en;
+        }
+
+        // Default tip
+        return tips.default[lang] || tips.default.en;
+    }
+
     // ========== PERSISTENCE (LOCAL STORAGE) ==========
 
     // Save game data to local storage
@@ -2278,6 +2895,18 @@ class Game {
         } catch (e) {
             // Storage might be full or disabled - fail silently
             console.warn('Could not save game:', e);
+        }
+
+        // Save campaign progress separately
+        this.saveCampaignProgress();
+    }
+
+    // Save campaign progress to local storage
+    saveCampaignProgress() {
+        try {
+            localStorage.setItem(CAMPAIGN_STORAGE_KEY, JSON.stringify(this.campaignProgress));
+        } catch (e) {
+            console.warn('Could not save campaign progress:', e);
         }
     }
 
@@ -2307,17 +2936,105 @@ class Game {
             // Invalid data or storage disabled - start fresh
             console.warn('Could not load game:', e);
         }
+
+        // Load campaign progress
+        this.loadCampaignProgress();
+    }
+
+    // Load campaign progress from local storage
+    loadCampaignProgress() {
+        try {
+            const saved = localStorage.getItem(CAMPAIGN_STORAGE_KEY);
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (data.completedLevels) {
+                    this.campaignProgress = data;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load campaign progress:', e);
+        }
+
+        // Update endless mode button state
+        this.updateEndlessButtonState();
+    }
+
+    // Update the endless button locked/unlocked state
+    updateEndlessButtonState() {
+        const isUnlocked = isEndlessModeUnlocked(this.campaignProgress);
+        if (isUnlocked) {
+            this.endlessButton.classList.remove('endless-locked');
+            this.endlessLockedText.classList.remove('visible');
+        } else {
+            this.endlessButton.classList.add('endless-locked');
+            this.endlessLockedText.classList.add('visible');
+        }
     }
 
     // Set up all event listeners
     setupEventListeners() {
         // Home screen buttons
-        document.getElementById('play-button').addEventListener('click', () => {
+        document.getElementById('campaign-button').addEventListener('click', () => {
+            this.showCampaign();
+        });
+
+        this.endlessButton.addEventListener('click', () => {
+            if (!isEndlessModeUnlocked(this.campaignProgress)) return;
+            this.campaignMode = false;
+            this.currentLevel = null;
             this.startGame();
         });
 
         document.getElementById('collection-button').addEventListener('click', () => {
             this.showScreen('collection');
+        });
+
+        // World select back button
+        document.getElementById('world-back-button').addEventListener('click', () => {
+            this.showScreen('home');
+        });
+
+        // Level select back button (goes to home since we only have World 1)
+        document.getElementById('level-back-button').addEventListener('click', () => {
+            this.showScreen('home');
+        });
+
+        // Level complete overlay buttons
+        document.getElementById('next-level-button').addEventListener('click', () => {
+            this.hideOverlay('level-complete');
+            const nextLevelId = this.currentLevel.id + 1;
+            if (nextLevelId <= 8 && isLevelUnlocked(nextLevelId, this.campaignProgress)) {
+                this.startCampaignLevel(nextLevelId);
+            } else {
+                // World 1 complete! Go back to level select
+                this.showLevelSelect(this.currentWorldId);
+            }
+        });
+
+        document.getElementById('retry-level-button').addEventListener('click', () => {
+            this.hideOverlay('level-complete');
+            this.startCampaignLevel(this.currentLevel.id);
+        });
+
+        document.getElementById('level-complete-home-button').addEventListener('click', () => {
+            this.hideOverlay('level-complete');
+            this.showLevelSelect(this.currentWorldId);
+        });
+
+        // Emoji feedback buttons
+        this.emojiFeedbackButtons.forEach(btn => {
+            btn.addEventListener('click', () => this.handleEmojiFeedback(btn));
+        });
+
+        // Level failed overlay buttons
+        document.getElementById('retry-failed-button').addEventListener('click', () => {
+            this.hideOverlay('level-failed');
+            this.startCampaignLevel(this.currentLevel.id);
+        });
+
+        document.getElementById('level-failed-home-button').addEventListener('click', () => {
+            this.hideOverlay('level-failed');
+            this.showLevelSelect(this.currentWorldId);
         });
 
         // Game screen buttons
@@ -2349,7 +3066,11 @@ class Game {
 
         document.getElementById('pause-home-button').addEventListener('click', () => {
             this.hideAllOverlays();
-            this.showScreen('home');
+            if (this.campaignMode) {
+                this.showLevelSelect(this.currentWorldId);
+            } else {
+                this.showScreen('home');
+            }
         });
 
         // Restart confirmation buttons
@@ -2359,16 +3080,28 @@ class Game {
 
         document.getElementById('restart-confirm').addEventListener('click', () => {
             this.hideOverlay('restart');
-            this.startGame();
+            if (this.campaignMode && this.currentLevel) {
+                this.startCampaignLevel(this.currentLevel.id);
+            } else {
+                this.startGame();
+            }
         });
 
-        // Game over screen buttons
+        // Game over screen buttons (endless mode only)
         document.getElementById('play-again-button').addEventListener('click', () => {
-            this.startGame();
+            if (this.campaignMode && this.currentLevel) {
+                this.startCampaignLevel(this.currentLevel.id);
+            } else {
+                this.startGame();
+            }
         });
 
         document.getElementById('gameover-home-button').addEventListener('click', () => {
-            this.showScreen('home');
+            if (this.campaignMode) {
+                this.showLevelSelect(this.currentWorldId);
+            } else {
+                this.showScreen('home');
+            }
         });
 
         // Share button (game over screen)

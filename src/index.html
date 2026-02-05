@@ -28,16 +28,69 @@
         <button class="lang-toggle" aria-label="Toggle language">EN</button>
         <h1 class="home-title" data-i18n="home.title">Powers of Pig</h1>
         <div class="home-pig">🐷</div>
-        <button class="btn btn-primary" id="play-button" data-i18n="home.play">Play</button>
-        <button class="btn btn-secondary" id="collection-button" data-i18n="home.collection">Collection</button>
-        <div class="high-score-display">
-            <span data-i18n="home.highScore">High Score:</span>
-            <span id="high-score">0</span>
+        <button class="btn btn-primary" id="campaign-button" data-i18n="home.play">Play</button>
+        <div class="home-secondary-links">
+            <a class="subtle-link" id="endless-button" data-i18n="campaign.classicMode">Classic Mode</a>
+            <span class="link-separator">•</span>
+            <a class="subtle-link" id="collection-button" data-i18n="home.collection">Collection</a>
+        </div>
+        <div class="endless-locked-text" id="endless-locked-text" data-i18n="campaign.endlessLocked">Complete World 1 to unlock</div>
+    </div>
+
+    <!-- WORLD SELECT SCREEN -->
+    <div class="screen world-select-screen" id="world-select-screen">
+        <button class="lang-toggle" aria-label="Toggle language">EN</button>
+        <header class="world-select-header">
+            <button class="icon-btn" id="world-back-button">←</button>
+            <h2 data-i18n="campaign.worldSelect">Select World</h2>
+            <div class="total-stars-display">
+                <span class="star-icon">⭐</span>
+                <span id="total-stars">0</span>
+            </div>
+        </header>
+        <div class="world-grid" id="world-grid">
+            <!-- World buttons will be rendered by JS -->
+        </div>
+    </div>
+
+    <!-- LEVEL SELECT SCREEN -->
+    <div class="screen level-select-screen" id="level-select-screen">
+        <button class="lang-toggle" aria-label="Toggle language">EN</button>
+        <header class="level-select-header">
+            <button class="icon-btn" id="level-back-button">←</button>
+            <h2 id="level-select-world-name">The Farm</h2>
+            <button class="lang-toggle lang-toggle-header" aria-label="Toggle language">EN</button>
+        </header>
+        <div class="level-grid" id="level-grid">
+            <!-- Level buttons will be rendered by JS -->
         </div>
     </div>
 
     <!-- GAME SCREEN -->
     <div class="screen game-screen" id="game-screen">
+        <!-- Campaign Level Header (hidden in endless mode) -->
+        <div class="campaign-header" id="campaign-header">
+            <div class="campaign-level-info">
+                <span class="campaign-level-number" id="campaign-level-number">Level 1</span>
+                <span class="campaign-level-name" id="campaign-level-name">Baby Steps</span>
+            </div>
+            <div class="campaign-goal" id="campaign-goal">Reach Sprout</div>
+        </div>
+        <!-- Campaign Stats (hidden in endless mode) -->
+        <div class="campaign-stats" id="campaign-stats">
+            <div class="campaign-stat campaign-stat-timer" id="campaign-stat-timer">
+                <span class="stat-label" data-i18n="campaign.time">Time</span>
+                <span class="stat-value" id="campaign-timer">--</span>
+            </div>
+            <div class="campaign-stat">
+                <span class="stat-label" data-i18n="campaign.moves">Moves</span>
+                <span class="stat-value" id="campaign-moves">0</span>
+            </div>
+            <div class="campaign-stat campaign-stat-merges" id="campaign-stat-merges">
+                <span class="stat-label" data-i18n="campaign.merges">Merges</span>
+                <span class="stat-value" id="campaign-merges">0</span>
+            </div>
+        </div>
         <header class="game-header">
             <button class="icon-btn" id="home-button" title="Home">🏠</button>
             <div class="score-container">
@@ -90,6 +143,59 @@
             <div class="modal-buttons">
                 <button class="btn btn-secondary" id="restart-cancel" data-i18n="restart.cancel">Cancel</button>
                 <button class="btn btn-danger" id="restart-confirm" data-i18n="restart.confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEVEL COMPLETE OVERLAY -->
+    <div class="overlay" id="level-complete-overlay">
+        <div class="modal level-complete-modal">
+            <div class="level-complete-checkmark">✓</div>
+            <h2 data-i18n="campaign.complete">Complete!</h2>
+            <div class="level-complete-score">
+                <span data-i18n="game.score">Score:</span>
+                <span id="level-complete-score-value">0</span>
+            </div>
+            <!-- Pig Unlock Section (shown when a new pig is unlocked) -->
+            <div class="pig-unlock-section" id="pig-unlock-section">
+                <div class="pig-unlock-badge" id="pig-unlock-badge">
+                    <img class="pig-unlock-image" id="pig-unlock-image" src="" alt="">
+                </div>
+                <div class="pig-unlock-name" id="pig-unlock-name"></div>
+                <div class="pig-unlock-quote" id="pig-unlock-quote"></div>
+            </div>
+            <!-- Emoji Feedback -->
+            <div class="emoji-feedback" id="emoji-feedback">
+                <div class="emoji-feedback-question" data-i18n="campaign.howWasLevel">How was this level?</div>
+                <div class="emoji-feedback-options">
+                    <button class="emoji-btn" data-rating="1" title="Too hard">😫</button>
+                    <button class="emoji-btn" data-rating="2" title="Meh">😐</button>
+                    <button class="emoji-btn" data-rating="3" title="Good">🙂</button>
+                    <button class="emoji-btn" data-rating="4" title="Loved it">😍</button>
+                </div>
+                <div class="emoji-feedback-thanks" id="emoji-feedback-thanks" data-i18n="campaign.thanksFeedback">Thanks!</div>
+            </div>
+            <div class="level-complete-buttons">
+                <button class="btn btn-primary" id="next-level-button" data-i18n="campaign.next">Next Level</button>
+                <button class="btn btn-secondary" id="retry-level-button" data-i18n="campaign.retry">Retry</button>
+                <button class="btn btn-tertiary" id="level-complete-home-button" data-i18n="campaign.levelSelect2">Level Select</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEVEL FAILED OVERLAY (So Close!) -->
+    <div class="overlay" id="level-failed-overlay">
+        <div class="modal level-failed-modal">
+            <h2 class="level-failed-title" data-i18n="campaign.soClose">SO CLOSE!</h2>
+            <div class="level-failed-progress" id="level-failed-progress">
+                <!-- Progress message filled by JS -->
+            </div>
+            <div class="level-failed-tip" id="level-failed-tip">
+                <!-- Tip filled by JS -->
+            </div>
+            <div class="level-failed-buttons">
+                <button class="btn btn-primary" id="retry-failed-button" data-i18n="campaign.retry">Retry</button>
+                <a class="btn btn-tertiary" id="level-failed-home-button" data-i18n="campaign.backToLevels">Back to Levels</a>
             </div>
         </div>
     </div>
@@ -208,6 +314,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="strings.js"></script>
+    <script src="levels.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

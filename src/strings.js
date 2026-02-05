@@ -122,6 +122,38 @@ const STRINGS = {
         // New Game Over Screen
         gameOverNew: {
             tierIndicator: (current, total) => `Tier ${current} of ${total}`
+        },
+
+        // Campaign Mode
+        campaign: {
+            title: 'Campaign',
+            worldSelect: 'Select World',
+            levelSelect: 'Select Level',
+            classicMode: 'Classic Mode',
+            endless: 'Endless Mode',
+            endlessLocked: 'Complete World 1 to unlock',
+            back: 'Back',
+            backToLevels: 'Back to Levels',
+            level: 'Level',
+            goal: 'Goal',
+            locked: 'Locked',
+            complete: 'Complete!',
+            newPigUnlocked: 'New Pig Unlocked!',
+            next: 'Next Level',
+            retry: 'Retry',
+            levelSelect2: 'Level Select',
+            worldName1: 'The Farm',
+            levelOf: (current, total) => `Level ${current} of ${total}`,
+            moves: 'Moves',
+            time: 'Time',
+            merges: 'Merges',
+            // Failure screen
+            soClose: 'SO CLOSE!',
+            tryAgain: 'TRY AGAIN',
+            takeBreak: 'Take a Break',
+            // Emoji feedback
+            howWasLevel: 'How was this level?',
+            thanksFeedback: 'Thanks!'
         }
     },
 
@@ -244,6 +276,38 @@ const STRINGS = {
         // New Game Over Screen
         gameOverNew: {
             tierIndicator: (current, total) => `Niveau ${current} sur ${total}`
+        },
+
+        // Campaign Mode
+        campaign: {
+            title: 'Campagne',
+            worldSelect: 'Choisir un monde',
+            levelSelect: 'Choisir un niveau',
+            classicMode: 'Mode Classique',
+            endless: 'Mode Infini',
+            endlessLocked: 'Termine le Monde 1 pour débloquer',
+            back: 'Retour',
+            backToLevels: 'Retour aux Niveaux',
+            level: 'Niveau',
+            goal: 'Objectif',
+            locked: 'Verrouillé',
+            complete: 'Terminé !',
+            newPigUnlocked: 'Nouveau Cochon Débloqué !',
+            next: 'Niveau Suivant',
+            retry: 'Réessayer',
+            levelSelect2: 'Sélection du niveau',
+            worldName1: 'La Ferme',
+            levelOf: (current, total) => `Niveau ${current} sur ${total}`,
+            moves: 'Coups',
+            time: 'Temps',
+            merges: 'Fusions',
+            // Failure screen
+            soClose: 'SI PRÈS !',
+            tryAgain: 'RÉESSAYER',
+            takeBreak: 'Faire une Pause',
+            // Emoji feedback
+            howWasLevel: 'Comment était ce niveau ?',
+            thanksFeedback: 'Merci !'
         }
     }
 };
