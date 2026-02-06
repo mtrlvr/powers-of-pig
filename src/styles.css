@@ -1542,25 +1542,6 @@ body {
 
 /* ========== CAMPAIGN MODE STYLES ========== */
 
-/* Endless locked text on home screen */
-.endless-locked-text {
-    font-size: 0.8rem;
-    color: #8a9a82;
-    margin-top: -10px;
-    margin-bottom: 5px;
-    display: none;
-}
-
-.endless-locked-text.visible {
-    display: block;
-}
-
-/* Endless button locked state */
-.btn.endless-locked {
-    opacity: 0.5;
-    pointer-events: none;
-}
-
 /* World Select Screen */
 .world-select-screen {
     gap: 20px;

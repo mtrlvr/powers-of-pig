@@ -516,7 +516,6 @@ class Game {
         this.campaignTimerElement = document.getElementById('campaign-timer');
         this.campaignStatTimer = document.getElementById('campaign-stat-timer');
         this.endlessButton = document.getElementById('endless-button');
-        this.endlessLockedText = document.getElementById('endless-locked-text');
 
         // Level complete overlay elements
         this.levelCompleteScoreValue = document.getElementById('level-complete-score-value');
@@ -2684,9 +2683,6 @@ class Game {
             this.saveCampaignProgress();
         }
 
-        // Update endless mode button state (in case level 8 was just completed)
-        this.updateEndlessButtonState();
-
         // Track completion
         Analytics.track('level_completed', {
             level_id: level.id,
@@ -2955,20 +2951,6 @@ class Game {
             console.warn('Could not load campaign progress:', e);
         }
 
-        // Update endless mode button state
-        this.updateEndlessButtonState();
-    }
-
-    // Update the endless button locked/unlocked state
-    updateEndlessButtonState() {
-        const isUnlocked = isEndlessModeUnlocked(this.campaignProgress);
-        if (isUnlocked) {
-            this.endlessButton.classList.remove('endless-locked');
-            this.endlessLockedText.classList.remove('visible');
-        } else {
-            this.endlessButton.classList.add('endless-locked');
-            this.endlessLockedText.classList.add('visible');
-        }
     }
 
     // Set up all event listeners
@@ -2979,7 +2961,6 @@ class Game {
         });
 
         this.endlessButton.addEventListener('click', () => {
-            if (!isEndlessModeUnlocked(this.campaignProgress)) return;
             this.campaignMode = false;
             this.currentLevel = null;
             this.startGame();
