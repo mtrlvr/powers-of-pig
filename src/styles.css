@@ -293,6 +293,30 @@ body {
         inset 0 1px 2px rgba(60, 45, 30, 0.15);
 }
 
+/* World 2 modifier: blocked cells (mud patches) */
+.cell.blocked {
+    background: linear-gradient(135deg, #5d4a3a 0%, #7a5d4a 50%, #5d4a3a 100%);
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+    position: relative;
+}
+
+.cell.blocked::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 4px,
+        rgba(0, 0, 0, 0.1) 4px,
+        rgba(0, 0, 0, 0.1) 8px
+    );
+    border-radius: 10px;
+}
+
 .tile-container {
     position: absolute;
     top: 12px;
@@ -1405,6 +1429,31 @@ body {
     }
 }
 
+/* World Complete Confetti (full screen) */
+.world-complete-confetti {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10000;
+}
+
+.world-complete-confetti .confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    animation: confetti-fall-full linear forwards;
+}
+
+@keyframes confetti-fall-full {
+    to {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
 .merge-text {
     position: absolute;
     top: 40%;
@@ -1634,6 +1683,23 @@ body {
 .world-locked-text {
     font-size: 0.85rem;
     color: rgba(255,255,255,0.8);
+}
+
+.world-number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.world-lock-icon {
+    font-size: 2.5rem;
+}
+
+.world-locked-message {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.85);
+    text-align: center;
 }
 
 /* Level Select Screen */
@@ -2063,6 +2129,47 @@ body {
 
 .level-failed-buttons .btn {
     width: 100%;
+}
+
+/* ========== WORLD INTRODUCTION MODAL ========== */
+.world-intro-modal {
+    max-width: 400px;
+    text-align: center;
+    padding: 40px 30px;
+}
+
+.world-intro-content {
+    margin-bottom: 30px;
+}
+
+.world-intro-name {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #5a6f52;
+    margin-bottom: 15px;
+    line-height: 1.2;
+}
+
+.world-intro-description {
+    font-size: 1.1rem;
+    color: #7a8f72;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.btn-large {
+    font-size: 1.2rem;
+    padding: 15px 40px;
+}
+
+@media (max-width: 768px) {
+    .world-intro-name {
+        font-size: 2rem;
+    }
+
+    .world-intro-description {
+        font-size: 1rem;
+    }
 }
 
 /* ========== MOBILE TUTORIAL & HINT ARROWS ========== */

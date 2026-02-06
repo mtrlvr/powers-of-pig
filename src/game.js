@@ -402,6 +402,10 @@ class Game {
         this.timeRemaining = null;
         this.moveLimit = null; // for move_limit modifier
 
+        // World 2 modifiers
+        this.blockedCells = new Set(); // for blocked_cells modifier (stores "row,col" strings)
+        this.singleCellMovement = false; // for single_cell_movement modifier
+
         // Tile animation system
         this.nextTileId = 0;
         this.tileElements = new Map(); // tileId → HTMLElement
@@ -461,7 +465,8 @@ class Game {
             feedback: document.getElementById('feedback-overlay'),
             'view-board': document.getElementById('view-board-overlay'),
             'level-complete': document.getElementById('level-complete-overlay'),
-            'level-failed': document.getElementById('level-failed-overlay')
+            'level-failed': document.getElementById('level-failed-overlay'),
+            'world-intro': document.getElementById('world-intro-overlay')
         };
 
         // Feedback modal elements
@@ -505,6 +510,11 @@ class Game {
         this.worldGrid = document.getElementById('world-grid');
         this.levelGrid = document.getElementById('level-grid');
         this.levelSelectWorldName = document.getElementById('level-select-world-name');
+
+        // World intro modal elements
+        this.worldIntroName = document.getElementById('world-intro-name');
+        this.worldIntroDescription = document.getElementById('world-intro-description');
+
         this.campaignHeader = document.getElementById('campaign-header');
         this.campaignLevelNumber = document.getElementById('campaign-level-number');
         this.campaignLevelName = document.getElementById('campaign-level-name');
@@ -652,6 +662,10 @@ class Game {
         this.size = 4;
         this.boardContainer.setAttribute('data-size', '4');
 
+        // Clear World 2 modifiers for endless mode
+        this.blockedCells.clear();
+        this.singleCellMovement = false;
+
         this.score = 0;
         this.gameOver = false;
         this.won = false;
@@ -701,10 +715,18 @@ class Game {
     // Create the empty cell backgrounds
     createBackgroundCells() {
         this.gridBackground.innerHTML = '';
-        for (let i = 0; i < this.size * this.size; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
-            this.gridBackground.appendChild(cell);
+        for (let row = 0; row < this.size; row++) {
+            for (let col = 0; col < this.size; col++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+
+                // Add blocked class for World 2 blocked_cells modifier
+                if (this.isBlockedCell(row, col)) {
+                    cell.classList.add('blocked');
+                }
+
+                this.gridBackground.appendChild(cell);
+            }
         }
     }
 
@@ -752,13 +774,19 @@ class Game {
         this.render();
     }
 
+    // Helper method to check if a cell is blocked (World 2 modifier)
+    isBlockedCell(row, col) {
+        return this.blockedCells.has(`${row},${col}`);
+    }
+
     // Spawn a new tile in a random empty position
     spawnTile() {
         const emptyCells = [];
 
         for (let row = 0; row < this.size; row++) {
             for (let col = 0; col < this.size; col++) {
-                if (this.grid[row][col] === null) {
+                // Skip blocked cells (World 2 modifier)
+                if (this.grid[row][col] === null && !this.isBlockedCell(row, col)) {
                     emptyCells.push({ row, col });
                 }
             }
@@ -1066,6 +1094,35 @@ class Game {
         setTimeout(() => {
             container.innerHTML = '';
         }, 2000);
+    }
+
+    // Show confetti when completing a world (full-screen)
+    showWorldCompleteConfetti() {
+        const confettiContainer = document.createElement('div');
+        confettiContainer.className = 'confetti-container world-complete-confetti';
+        document.body.appendChild(confettiContainer);
+
+        // Create 30 confetti pieces (more than first merge)
+        for (let i = 0; i < 30; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+
+            // Random colors
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9'];
+            confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+
+            // Random position and animation delay
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.animationDelay = Math.random() * 0.5 + 's';
+            confetti.style.animationDuration = (Math.random() * 1 + 1.5) + 's';
+
+            confettiContainer.appendChild(confetti);
+        }
+
+        // Remove after animation
+        setTimeout(() => {
+            confettiContainer.remove();
+        }, 3000);
     }
 
     // ========== STUCK HELP SYSTEM ==========
@@ -1759,10 +1816,16 @@ class Game {
 
             const nextTile = this.grid[nextRow][nextCol];
 
-            if (nextTile === null) {
+            // Check for empty cell (and not blocked)
+            if (nextTile === null && !this.isBlockedCell(nextRow, nextCol)) {
                 newRow = nextRow;
                 newCol = nextCol;
-            } else if (nextTile.value === tile.value && !nextTile.merged) {
+
+                // World 2 modifier: single_cell_movement (only move 1 cell per swipe)
+                if (this.singleCellMovement) {
+                    break;
+                }
+            } else if (nextTile && nextTile.value === tile.value && !nextTile.merged) {
                 newRow = nextRow;
                 newCol = nextCol;
                 merged = true;
@@ -1854,24 +1917,31 @@ class Game {
 
     // Check if no moves are possible
     checkGameOver() {
+        // Check for empty cells (skip blocked cells)
         for (let row = 0; row < this.size; row++) {
             for (let col = 0; col < this.size; col++) {
-                if (this.grid[row][col] === null) {
+                if (!this.isBlockedCell(row, col) && this.grid[row][col] === null) {
                     return false;
                 }
             }
         }
 
+        // Check for adjacent matching tiles (skip blocked cells)
         for (let row = 0; row < this.size; row++) {
             for (let col = 0; col < this.size; col++) {
+                // Skip blocked cells
+                if (this.isBlockedCell(row, col)) continue;
+
                 const tile = this.grid[row][col];
                 if (tile) {
-                    if (col < this.size - 1 && this.grid[row][col + 1] &&
-                        this.grid[row][col + 1].value === tile.value) {
+                    // Check right neighbor (skip if it's blocked)
+                    if (col < this.size - 1 && !this.isBlockedCell(row, col + 1) &&
+                        this.grid[row][col + 1] && this.grid[row][col + 1].value === tile.value) {
                         return false;
                     }
-                    if (row < this.size - 1 && this.grid[row + 1][col] &&
-                        this.grid[row + 1][col].value === tile.value) {
+                    // Check bottom neighbor (skip if it's blocked)
+                    if (row < this.size - 1 && !this.isBlockedCell(row + 1, col) &&
+                        this.grid[row + 1][col] && this.grid[row + 1][col].value === tile.value) {
                         return false;
                     }
                 }
@@ -2389,9 +2459,52 @@ class Game {
 
     // ========== CAMPAIGN MODE METHODS ==========
 
-    // Show campaign (go directly to level select for World 1)
+    // Show campaign (go to world select screen)
     showCampaign() {
-        this.showLevelSelect(1);
+        this.showWorldSelect();
+    }
+
+    // Show world select screen
+    showWorldSelect() {
+        this.renderWorldSelect();
+        this.showScreen('world-select');
+    }
+
+    // Render world select buttons
+    renderWorldSelect() {
+        const strings = getStrings();
+        const lang = getCurrentLanguage();
+
+        // Get world grid container
+        const worldGrid = document.getElementById('world-grid');
+        if (!worldGrid) return;
+
+        worldGrid.innerHTML = '';
+
+        for (const world of WORLDS) {
+            const isUnlocked = isWorldUnlocked(world.id, this.campaignProgress);
+
+            const button = document.createElement('button');
+            button.className = `world-button ${isUnlocked ? '' : 'locked'}`;
+
+            if (isUnlocked) {
+                button.innerHTML = `
+                    <div class="world-number">${world.id}</div>
+                    <div class="world-name">${world.name[lang] || world.name.en}</div>
+                `;
+                button.addEventListener('click', () => {
+                    this.showLevelSelect(world.id);
+                });
+            } else {
+                button.innerHTML = `
+                    <div class="world-lock-icon">🔒</div>
+                    <div class="world-name">${world.name[lang] || world.name.en}</div>
+                    <div class="world-locked-message">${strings.campaign.completeWorld1}</div>
+                `;
+            }
+
+            worldGrid.appendChild(button);
+        }
     }
 
     // Show level select screen for a specific world
@@ -2439,8 +2552,48 @@ class Game {
         }
     }
 
+    // Show world introduction modal before starting level 1
+    showWorldIntroduction(worldId, onStart) {
+        const world = getWorldById(worldId);
+        if (!world) return;
+
+        const strings = getStrings();
+        const lang = getCurrentLanguage();
+
+        // Populate modal content
+        this.worldIntroName.textContent = world.name[lang] || world.name.en;
+        this.worldIntroDescription.textContent = world.description[lang] || world.description.en;
+
+        // Show overlay
+        this.showOverlay('world-intro');
+
+        // Store callback for when user clicks "Let's Go!"
+        this.worldIntroCallback = onStart;
+    }
+
     // Start a campaign level
     startCampaignLevel(levelId) {
+        const level = getLevelById(levelId);
+        if (!level) return;
+
+        // Check if this is the first level of a world (show intro)
+        const worldLevels = getLevelsForWorld(level.world);
+        const isFirstLevel = worldLevels.length > 0 && levelId === worldLevels[0].id;
+
+        if (isFirstLevel) {
+            // Show world introduction first, then start level
+            this.showWorldIntroduction(level.world, () => {
+                this.hideOverlay('world-intro');
+                this.actuallyStartCampaignLevel(levelId);
+            });
+        } else {
+            // Not first level, start directly
+            this.actuallyStartCampaignLevel(levelId);
+        }
+    }
+
+    // Actually start a campaign level (renamed from startCampaignLevel)
+    actuallyStartCampaignLevel(levelId) {
         const level = getLevelById(levelId);
         if (!level) return;
 
@@ -2460,6 +2613,8 @@ class Game {
         this.timeRemaining = null;
         this.moveLimit = null;
         this.size = 4; // Default size
+        this.blockedCells.clear(); // Reset World 2 modifiers
+        this.singleCellMovement = false;
 
         if (level.modifiers && level.modifiers.length > 0) {
             for (const mod of level.modifiers) {
@@ -2471,6 +2626,15 @@ class Game {
                 }
                 if (mod.type === 'small_board') {
                     this.size = mod.size || 3;
+                }
+                if (mod.type === 'blocked_cells') {
+                    // Store blocked cells as "row,col" strings for O(1) lookup
+                    for (const pos of mod.positions) {
+                        this.blockedCells.add(`${pos[0]},${pos[1]}`);
+                    }
+                }
+                if (mod.type === 'single_cell_movement') {
+                    this.singleCellMovement = true;
                 }
             }
         }
@@ -2715,13 +2879,28 @@ class Game {
             this.pigUnlockSection.classList.remove('visible');
         }
 
-        // Hide next button if this is the last level (8) or next level would be locked
+        // Update "Next Level" button text and visibility
         const nextLevelButton = document.getElementById('next-level-button');
         const nextLevelId = level.id + 1;
-        if (nextLevelId > 8) {
-            nextLevelButton.style.display = 'none';
-        } else {
+        const nextLevel = getLevelById(nextLevelId);
+
+        if (nextLevel && nextLevel.world === level.world && isLevelUnlocked(nextLevelId, this.campaignProgress)) {
+            // Next level in same world
             nextLevelButton.style.display = 'block';
+            nextLevelButton.setAttribute('data-i18n', 'campaign.next');
+            nextLevelButton.textContent = strings.campaign.next; // "Next Level"
+        } else {
+            // Check if next world exists
+            const nextWorldId = level.world + 1;
+            if (getWorldById(nextWorldId) && isWorldUnlocked(nextWorldId, this.campaignProgress)) {
+                // Next world unlocked!
+                nextLevelButton.style.display = 'block';
+                nextLevelButton.setAttribute('data-i18n', 'campaign.nextWorld');
+                nextLevelButton.textContent = strings.campaign.nextWorld; // "Next World"
+            } else {
+                // No next world or not unlocked
+                nextLevelButton.style.display = 'none';
+            }
         }
 
         // Reset emoji feedback state
@@ -2971,24 +3150,53 @@ class Game {
         });
 
         // World select back button
+        // World select back button (goes to home)
         document.getElementById('world-back-button').addEventListener('click', () => {
             this.showScreen('home');
         });
 
-        // Level select back button (goes to home since we only have World 1)
+        // Level select back button (goes to world select)
         document.getElementById('level-back-button').addEventListener('click', () => {
-            this.showScreen('home');
+            this.showWorldSelect();
+        });
+
+        // World intro "Let's Go!" button
+        document.getElementById('world-intro-start-button').addEventListener('click', () => {
+            if (this.worldIntroCallback) {
+                this.worldIntroCallback();
+                this.worldIntroCallback = null; // Clear callback
+            }
         });
 
         // Level complete overlay buttons
         document.getElementById('next-level-button').addEventListener('click', () => {
             this.hideOverlay('level-complete');
             const nextLevelId = this.currentLevel.id + 1;
-            if (nextLevelId <= 8 && isLevelUnlocked(nextLevelId, this.campaignProgress)) {
+            const nextLevel = getLevelById(nextLevelId);
+
+            // Check if there's a next level in the current world
+            if (nextLevel && nextLevel.world === this.currentWorldId && isLevelUnlocked(nextLevelId, this.campaignProgress)) {
                 this.startCampaignLevel(nextLevelId);
             } else {
-                // World 1 complete! Go back to level select
-                this.showLevelSelect(this.currentWorldId);
+                // Check if next world exists and is unlocked
+                const nextWorldId = this.currentWorldId + 1;
+                const nextWorld = getWorldById(nextWorldId);
+
+                if (nextWorld && isWorldUnlocked(nextWorldId, this.campaignProgress)) {
+                    // Next world unlocked! Show confetti and go to it
+                    this.showWorldCompleteConfetti();
+
+                    // Start level 1 of next world after confetti
+                    setTimeout(() => {
+                        const nextWorldLevels = getLevelsForWorld(nextWorldId);
+                        if (nextWorldLevels.length > 0) {
+                            this.startCampaignLevel(nextWorldLevels[0].id);
+                        }
+                    }, 1500); // 1.5s delay for confetti
+                } else {
+                    // No next world or not unlocked - go back to level select
+                    this.showLevelSelect(this.currentWorldId);
+                }
             }
         });
 

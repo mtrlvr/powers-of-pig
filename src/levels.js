@@ -3,7 +3,22 @@
 
 // ========== WORLD DEFINITIONS ==========
 const WORLDS = [
-    { id: 1, name: { en: 'The Farm', fr: 'La Ferme' } }
+    {
+        id: 1,
+        name: { en: 'The Farm', fr: 'La Ferme' },
+        description: {
+            en: 'Learn the basics and discover your first pigs',
+            fr: 'Découvre les bases du jeu'
+        }
+    },
+    {
+        id: 2,
+        name: { en: 'The Mudlands', fr: 'Les Marais' },
+        description: {
+            en: 'Navigate mud patches and master strategic movement',
+            fr: 'Défie les marais et maîtrise tes déplacements'
+        }
+    }
 ];
 
 // ========== WORLD 1 LEVELS (8 levels) ==========
@@ -96,6 +111,108 @@ const CAMPAIGN_LEVELS = [
             description: { en: 'Reach Sir Oinks', fr: 'Atteins Sire Gruik' }
         },
         modifiers: [{ type: 'move_limit', moves: 50 }]
+    },
+
+    // ========== WORLD 2: THE MUDLANDS (8 levels) ==========
+    {
+        id: 9,
+        world: 2,
+        name: { en: 'Muddy Ground', fr: 'Sol Boueux' },
+        goal: {
+            type: 'reach_tier',
+            value: 6,
+            description: { en: 'Reach Sir Oinks', fr: 'Atteins Sire Gruik' }
+        },
+        modifiers: [{ type: 'blocked_cells', positions: [[0, 0], [3, 3]] }]
+    },
+    {
+        id: 10,
+        world: 2,
+        name: { en: 'Slow Slide', fr: 'Glissement Lent' },
+        goal: {
+            type: 'reach_tier',
+            value: 6,
+            description: { en: 'Reach Sir Oinks', fr: 'Atteins Sire Gruik' }
+        },
+        modifiers: [{ type: 'single_cell_movement' }]
+    },
+    {
+        id: 11,
+        world: 2,
+        name: { en: 'Deeper Mud', fr: 'Boue Profonde' },
+        goal: {
+            type: 'reach_tier',
+            value: 7,
+            description: { en: 'Reach Wiggleton', fr: 'Atteins Wiggleton' }
+        },
+        modifiers: [{ type: 'blocked_cells', positions: [[1, 1], [2, 2], [1, 2]] }]
+    },
+    {
+        id: 12,
+        world: 2,
+        name: { en: 'Race Through Mud', fr: 'Course dans la Boue' },
+        goal: {
+            type: 'reach_tier',
+            value: 7,
+            description: { en: 'Reach Wiggleton', fr: 'Atteins Wiggleton' }
+        },
+        modifiers: [
+            { type: 'single_cell_movement' },
+            { type: 'time_limit', seconds: 120 }
+        ]
+    },
+    {
+        id: 13,
+        world: 2,
+        name: { en: 'Score in the Swamp', fr: 'Score dans le Marais' },
+        goal: {
+            type: 'reach_score',
+            value: 1000,
+            description: { en: 'Score 1000 points', fr: 'Marque 1000 points' }
+        },
+        modifiers: [{ type: 'blocked_cells', positions: [[0, 1], [3, 2]] }]
+    },
+    {
+        id: 14,
+        world: 2,
+        name: { en: 'Tight Bog', fr: 'Marécage Étroit' },
+        goal: {
+            type: 'reach_tier',
+            value: 6,
+            description: { en: 'Reach Sir Oinks', fr: 'Atteins Sire Gruik' }
+        },
+        modifiers: [
+            { type: 'small_board', size: 3 },
+            { type: 'blocked_cells', positions: [[0, 0], [2, 2]] }
+        ]
+    },
+    {
+        id: 15,
+        world: 2,
+        name: { en: 'Precision Mire', fr: 'Bourbier de Précision' },
+        goal: {
+            type: 'reach_tier',
+            value: 7,
+            description: { en: 'Reach Wiggleton', fr: 'Atteins Wiggleton' }
+        },
+        modifiers: [
+            { type: 'single_cell_movement' },
+            { type: 'move_limit', moves: 70 }
+        ]
+    },
+    {
+        id: 16,
+        world: 2,
+        name: { en: 'The Deep Muck', fr: 'La Boue Profonde' },
+        goal: {
+            type: 'reach_tier',
+            value: 9,
+            description: { en: 'Reach Sherlock Hams', fr: 'Atteins Sherlock Jambons' }
+        },
+        modifiers: [
+            { type: 'blocked_cells', positions: [[0, 3], [0, 0], [3, 0], [3, 3]], },
+            { type: 'move_limit', moves: 120 }
+        ]
     }
 ];
 
@@ -144,12 +261,29 @@ function getWorldById(worldId) {
     return WORLDS.find(world => world.id === worldId);
 }
 
-// Check if a level is unlocked (previous level completed or is level 1)
-function isLevelUnlocked(levelId, campaignProgress) {
-    if (levelId === 1) return true;
+// Check if a world is unlocked
+function isWorldUnlocked(worldId, campaignProgress) {
+    if (worldId === 1) return true; // World 1 always unlocked
 
+    // World 2 requires completing all of World 1 (level 8)
+    if (worldId === 2) {
+        return campaignProgress.completedLevels[8] !== undefined;
+    }
+
+    return false;
+}
+
+// Check if a level is unlocked (previous level completed or is first level of unlocked world)
+function isLevelUnlocked(levelId, campaignProgress) {
     const level = getLevelById(levelId);
     if (!level) return false;
+
+    // Check if the world is unlocked first
+    if (!isWorldUnlocked(level.world, campaignProgress)) return false;
+
+    // Check if this is the first level of the world
+    const worldLevels = getLevelsForWorld(level.world);
+    if (worldLevels.length > 0 && levelId === worldLevels[0].id) return true;
 
     // Check if previous level is completed
     const previousLevelId = levelId - 1;
@@ -186,6 +320,7 @@ if (typeof module !== 'undefined' && module.exports) {
         getLevelById,
         getLevelsForWorld,
         getWorldById,
+        isWorldUnlocked,
         isLevelUnlocked,
         isEndlessModeUnlocked,
         getTierValue,
