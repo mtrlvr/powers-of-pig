@@ -41,6 +41,10 @@ src/
 - Don't add abstractions until they're clearly needed
 - Test on mobile early and often - mobile browsers behave differently
 
+## Writing Style
+
+Follow The Economist style: clear, simple, direct. Before writing documentation, user-facing copy, or markdown files, read `WRITING_STYLE.md` for detailed guidelines.
+
 ## Key Implementation Details
 
 ### Tile Positioning & Animation System
