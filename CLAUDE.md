@@ -19,9 +19,11 @@ src/
   index.html         # Main HTML with all screens (home, game, pause, collection, etc.)
   styles.css         # All styling (responsive, tile colors, animations)
   game.js            # Core game engine (Game class, state management, rendering)
+  levels.js          # Campaign mode levels, worlds, modifiers, goal validation
   strings.js         # Centralized UI strings with EN/FR translations
   assets/
     pigs/            # 17 pig images (1.pip.png through 17.thelionpig.png)
+    sounds/          # 17 oink sounds (oink-01-pip.mp3 through oink-17-thelionpig.mp3)
 ```
 
 ## Architecture
@@ -77,11 +79,47 @@ Tiles use **absolute positioning with CSS transforms** (`transform: translate(x,
 ### Sound System (Web Audio API)
 Sound uses the **Web Audio API** (`AudioContext` + `AudioBuffer`) instead of `HTMLAudioElement` for iOS compatibility. iOS requires audio unlocked during a user gesture. The `AudioContext` is created on Play tap, which unlocks it. Sounds are preloaded as `AudioBuffer` objects and played via `BufferSourceNode`. The `audioContext.resume()` call handles iOS background suspension.
 
+### Campaign Mode System
+Defined in `levels.js`. Two worlds with 8 levels each.
+
+**Worlds:**
+| World | Name | Levels | Unlocks When |
+|-------|------|--------|--------------|
+| 1 | The Farm | 1-8 | Always open |
+| 2 | The Mudlands | 9-16 | Complete World 1 |
+
+**Goal Types:**
+- `reach_tier` — Create a pig of tier X
+- `reach_tier_count` — Create tier X multiple times
+- `reach_score` — Achieve target score
+- `merge_count` — Perform X merges
+- `clear_tier` — Remove all pigs of tier X
+
+**Modifiers:**
+- `time_limit` — Complete within X seconds
+- `move_limit` — Maximum moves allowed
+- `small_board` — 3x3 grid instead of 4x4
+- `blocked_cells` — Specific cells inactive
+- `single_cell_movement` — Tiles move only 1 cell per swipe
+
+**Level Completion:**
+- Level Complete overlay with score, emoji rating (4 options), pig unlock if applicable
+- Level Failed overlay ("SO CLOSE!") with progress message and contextual tips
+- Progress stored in localStorage under `pop_campaign`
+
+### Undo System
+Players can undo their last move. In campaign mode, `usedUndo` is tracked for analytics. Restores previous grid state, score, and move count.
+
 ### PIGS Constant
 Each tier defined with: `{ tier, name, color, icon, image }` - image paths point to `assets/pigs/` folder.
 
-### Screens
-- Home, Game, Pause (overlay), Game Over, Win, Collection (badge gallery), Feedback (overlay)
+### Screens & Overlays
+
+**Screens:**
+- Home, World Select, Level Select, Game, Game Over, Win, Collection
+
+**Overlays:**
+- Pause, Restart Confirmation, Feedback, Level Complete, Level Failed ("SO CLOSE!"), World Introduction, View Board
 
 ### Feedback System
 A two-question feedback modal appears on game over. Players can also trigger it via "Give Feedback" during play.
@@ -241,21 +279,56 @@ Full-screen game over with shareable content for viral growth.
 | `share_cancelled` | User cancels share sheet | `context` |
 | `view_board_clicked` | View Board clicked | — |
 
-## Build Phases (All Complete)
+## Current Features
 
-1. **Core Game Engine** - 4x4 grid, tile spawning, merge logic, win/lose detection
-2. **Pig Identity** - 17 pig tiers with names, colors, icons replacing numbers
-3. **Screens & Navigation** - All game screens with transitions
-4. **Persistence** - localStorage for state, badges, high score
-5. **Animations** - Smooth sliding, merge pop, spawn effects via CSS
-6. **Sound** - 17 unique oink sounds using Web Audio API oscillators
-7. **Haptics** - Vibration patterns on move, merge, win, game over
-8. **Visual Polish** - Custom pig images, tile alignment fixes, responsive design
-9. **Feedback System** - Two-question feedback modal on game over and in-game, stored in Supabase
-10. **Localisation** - English/French language toggle with browser locale detection and localStorage persistence
-11. **Analytics** - PostHog integration for player behaviour tracking
-12. **Reddit Launch Prep** - Removed password gate and lives system, streamlined feedback flow
-13. **Security Hardening** - Input validation, rate limiting, honeypot anti-bot on feedback form
-14. **Tutorial & Help System** - First-time tutorial with guided first merge, confetti celebration, and "Stuck?" help
-15. **Game Over & Share System** - Full-screen game over with hero pig, locale-formatted scores, image sharing via html2canvas, View Board feature
-16. **Tile Sliding Animation** - Smooth 120ms CSS transform animations for tile movement, DOM persistence via tile IDs, async move() with animation blocking
+**Game Modes:**
+- Campaign Mode — 2 worlds, 16 levels, progressive difficulty
+- Classic Mode — Endless 4x4, unlocks after World 1
+
+**Core Gameplay:**
+- 4x4 grid with 2048-style merging
+- 17 pig tiers (Pip → THE LION PIG)
+- Undo system
+- Win at tier 17, game over when board fills
+
+**Campaign Features:**
+- 5 goal types, 5 modifier types
+- Level complete/failed overlays
+- Emoji level rating
+- World introduction screens
+
+**Player Guidance:**
+- First-time tutorial with forced first merge
+- First merge celebration (confetti)
+- "Stuck?" help system
+
+**Social:**
+- Share card with pig image (html2canvas)
+- Web Share API / clipboard fallback
+- Mid-game share button
+- View final board
+
+**Polish:**
+- 17 unique oink sounds (Web Audio API)
+- Haptic feedback patterns
+- Smooth 120ms tile animations
+- Confetti celebration
+
+**Infrastructure:**
+- localStorage persistence
+- Supabase feedback storage
+- PostHog analytics
+- English/French localisation
+
+## Documentation Maintenance
+
+When adding features, update:
+1. `CLAUDE.md` — Technical details, implementation notes
+2. `README.md` — User-facing features only
+3. `CHANGELOG.md` — Version history
+4. `docs/tree-of-pig.md` — Feature roadmap
+
+When removing features:
+1. Search all `.md` files for references
+2. Update or remove outdated sections
+3. Mark as "Pruned" in tree-of-pig.md

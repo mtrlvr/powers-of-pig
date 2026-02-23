@@ -27,6 +27,8 @@ A mobile-first 2048 clone where numbers are replaced by increasingly absurd pigs
 
 ## Features
 
+- **Campaign Mode** — 16 levels across 2 worlds with goals and modifiers
+- **Classic Mode** — Endless play, unlocks after completing World 1
 - Smooth tile sliding animations
 - 17 unique pig sounds
 - Haptic feedback on supported devices
