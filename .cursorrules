@@ -1,0 +1,22 @@
+# Cursor AI Rules
+
+## Commit Messages
+
+When generating commit messages:
+
+- Use imperative mood ("Add feature" not "Added feature")
+- Keep the first line under 72 characters
+- Use everyday words (start, end, use — not commence, terminate, utilise)
+- Be direct and specific about what changed
+- No filler words (basically, actually, essentially)
+- Active voice only
+
+Examples of good commit messages:
+- Add World 2 campaign levels with time limit modifier
+- Fix tile alignment on mobile Safari
+- Update README with share system documentation
+
+Examples to avoid:
+- Updated the code to add new features
+- Various improvements and fixes
+- Basically added some stuff
