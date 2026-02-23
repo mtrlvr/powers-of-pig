@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working with this repository.
 
 ## Project Overview
 
-Powers of Pig is a mobile-first 2048 clone web game where numbers are replaced by increasingly absurd pigs (17 tiers, from "Pip" to "THE LION PIG").
+Powers of Pig is a mobile-first 2048 clone. Numbers are replaced by increasingly absurd pigs — 17 tiers, from "Pip" to "THE LION PIG".
 
 ## Development Commands
 
@@ -75,7 +75,7 @@ Tiles use **absolute positioning with CSS transforms** (`transform: translate(x,
 - `.tile.celebration-scale` - first merge celebration
 
 ### Sound System (Web Audio API)
-Sound uses the **Web Audio API** (`AudioContext` + `AudioBuffer`) instead of `HTMLAudioElement` for iOS compatibility. iOS requires audio to be unlocked during a user gesture - the `AudioContext` is created when the user taps the Play button, which properly unlocks it. Sounds are preloaded as `AudioBuffer` objects and played via `BufferSourceNode`. The `audioContext.resume()` call handles iOS suspending audio when the app goes to background.
+Sound uses the **Web Audio API** (`AudioContext` + `AudioBuffer`) instead of `HTMLAudioElement` for iOS compatibility. iOS requires audio unlocked during a user gesture. The `AudioContext` is created on Play tap, which unlocks it. Sounds are preloaded as `AudioBuffer` objects and played via `BufferSourceNode`. The `audioContext.resume()` call handles iOS background suspension.
 
 ### PIGS Constant
 Each tier defined with: `{ tier, name, color, icon, image }` - image paths point to `assets/pigs/` folder.
@@ -84,7 +84,7 @@ Each tier defined with: `{ tier, name, color, icon, image }` - image paths point
 - Home, Game, Pause (overlay), Game Over, Win, Collection (badge gallery), Feedback (overlay)
 
 ### Feedback System
-A two-question feedback modal appears on game over (before the game over screen) and can also be triggered via the "Give Feedback" link during gameplay.
+A two-question feedback modal appears on game over. Players can also trigger it via "Give Feedback" during play.
 
 **Questions:**
 1. "Who would you send this to?" — free text input, optional
@@ -117,7 +117,7 @@ Data sent to Supabase `player_feedback_comments` table. Supabase config (URL and
 - Defense in depth: JS validates lengths before submission even though HTML enforces maxlength
 
 ### Analytics System (PostHog)
-PostHog is integrated for player behaviour tracking during soft launch. The SDK is loaded in `index.html` head.
+PostHog tracks player behaviour during soft launch. SDK loaded in `index.html` head.
 
 **Events tracked:**
 | Event | When Triggered | Key Payload |
@@ -146,7 +146,7 @@ session_start → game_start → [merges, milestones] → game_over
 - PostHog config: `phc_hX8ezASA5I3IAhaSnH0XlcU4ePBW22CvdytKIAUyOtu` on `us.posthog.com`
 
 ### Localisation System
-The game supports English and French with a language toggle visible on all screens.
+English and French supported. Language toggle visible on all screens.
 
 **Key files:**
 - `strings.js` - Contains `STRINGS` object with `en` and `fr` keys, plus helper functions (`getCurrentLanguage()`, `setLanguage()`, `getStrings()`, `toggleLanguage()`)
@@ -165,7 +165,7 @@ The game supports English and French with a language toggle visible on all scree
 3. For dynamic text, call `getStrings().section.key` directly in JavaScript
 
 ### Tutorial & Help System
-First-time players get a guided tutorial, and all players have access to a "Stuck?" help system.
+First-time players get a guided tutorial. All players can access the "Stuck?" help system.
 
 **Tutorial Flow:**
 1. **Move 0**: Two Pips placed at `[3,1]` and `[3,2]` so RIGHT swipe merges them. Arrow points right, instruction text shows "Swipe to push pigs together". Wrong directions are blocked.
@@ -197,7 +197,7 @@ First-time players get a guided tutorial, and all players have access to a "Stuc
 - `stuck_hint_used`: User clicks "Stuck?" (payload: `recommended_direction`)
 
 ### Game Over Screen & Share System
-Full-screen game over experience with shareable content for viral growth.
+Full-screen game over with shareable content for viral growth.
 
 **Game Over Screen Layout:**
 - **Hero section**: Large pig image (160px), pig name, tier indicator ("Tier X of 17")

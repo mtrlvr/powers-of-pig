@@ -7,7 +7,7 @@ A mobile-first 2048 clone where numbers are replaced by increasingly absurd pigs
 ## How to Play
 
 - **Swipe** (mobile) or use **arrow keys** (desktop) to move all tiles
-- When two matching pigs collide, they **merge** into the next tier
+- Matching pigs **merge** into the next tier
 - Keep merging to discover all 17 pig evolutions
 - Game ends when the board fills up with no valid moves
 
