@@ -1,9 +1,20 @@
 {
   "name": "powers-of-pig",
   "version": "0.1.0",
+  "type": "module",
   "description": "A 2048 clone with increasingly absurd pigs",
   "scripts": {
     "dev": "npx serve src -l 3000",
-    "start": "npx serve src -l 3000"
+    "start": "npx serve src -l 3000",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/ui": "^4.0.18",
+    "jsdom": "^25.0.1",
+    "vitest": "^4.0.18",
+    "whatwg-mimetype": "^5.0.0"
   }
 }

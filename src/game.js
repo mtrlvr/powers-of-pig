@@ -1,353 +1,6 @@
 // Powers of Pig - Core Game Engine
 // A 2048 clone with pig theming
 
-// Supabase configuration
-const SUPABASE_URL = 'https://jsfhxldbdxhrrjapsmdk.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzZmh4bGRiZHhocnJqYXBzbWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1MDc3NTksImV4cCI6MjA4MDA4Mzc1OX0.InNcVlZr0kvDJuciGTDHWTQwgJQYYiwGBQB4sidfGJ0';
-
-// The 17 Pigs - mapping value to pig data
-const PIGS = {
-    // Softer, more pastel colors for cozy aesthetic
-    2:      { tier: 1,  name: 'Pip',              color: '#F5E6E3', icon: '🐷', image: 'assets/pigs/1.pip.png' },
-    4:      { tier: 2,  name: 'Sprout',           color: '#F8D8D6', icon: '🐷🌱', image: 'assets/pigs/2.sprout.png' },
-    8:      { tier: 3,  name: 'Trotter',          color: '#F5C4BF', icon: '🐷🦶', image: 'assets/pigs/3.trotter.png' },
-    16:     { tier: 4,  name: 'Hamlet',           color: '#F2B5A0', icon: '🐷🎭', image: 'assets/pigs/4.hamlet.png' },
-    32:     { tier: 5,  name: 'Hog',              color: '#E8A68E', icon: '🐗', image: 'assets/pigs/5.hog.png' },
-    64:     { tier: 6,  name: 'Sir Oinks',        color: '#E09575', icon: '🐷⚔️', image: 'assets/pigs/6.siroinks.png' },
-    128:    { tier: 7,  name: 'Wiggleton',        color: '#D88068', icon: '🐷💃', image: 'assets/pigs/7.wiggleton.png' },
-    256:    { tier: 8,  name: 'Baron von Bubble', color: '#D06B50', icon: '🐷🎩', image: 'assets/pigs/8.baronvonbubble.png' },
-    512:    { tier: 9,  name: 'Sherlock Hams',    color: '#C45B5B', icon: '🐷🔍', image: 'assets/pigs/9.sherlockhams.png' },
-    1024:   { tier: 10, name: 'Sir Loin',         color: '#B06090', icon: '🐷🥩', image: 'assets/pigs/10.sirloin.png' },
-    2048:   { tier: 11, name: 'Lord Porkington',  color: '#9068B0', icon: '🐷👑', image: 'assets/pigs/11.lordporkington.png' },
-    4096:   { tier: 12, name: 'Neil Hamstrong',   color: '#6080C0', icon: '🐷🚀', image: 'assets/pigs/12.neilhamstrong.png' },
-    8192:   { tier: 13, name: 'Erik the Pink',    color: '#509860', icon: '🐷⛵', image: 'assets/pigs/13.erikthepink.png' },
-    16384:  { tier: 14, name: 'Gandalf the Ham',  color: '#788C50', icon: '🐷🧙', image: 'assets/pigs/14.gandalftheham.png' },
-    32768:  { tier: 15, name: 'His Royal Hogness', color: '#C9A040', icon: '🐷👸', image: 'assets/pigs/15.hisroyalhogness.png' },
-    65536:  { tier: 16, name: 'The Cosmic Sow',   color: '#5C4080', icon: '🐷✨', image: 'assets/pigs/16.thecosmicsow.png' },
-    131072: { tier: 17, name: 'THE LION PIG',     color: null, icon: '🦁🐷', image: 'assets/pigs/17.thelionpig.png' }
-};
-
-// Get all pig values in order
-const PIG_VALUES = Object.keys(PIGS).map(Number).sort((a, b) => a - b);
-
-// ========== ANALYTICS (PostHog) ==========
-const MILESTONES_KEY = 'pop_milestones_reached';
-
-const Analytics = {
-    track(eventName, properties = {}) {
-        if (typeof posthog !== 'undefined' && posthog.capture) {
-            try { posthog.capture(eventName, properties); } catch (e) {}
-        }
-    },
-    hasMilestone(tier) {
-        try {
-            return JSON.parse(localStorage.getItem(MILESTONES_KEY) || '[]').includes(tier);
-        } catch (e) { return false; }
-    },
-    setMilestone(tier) {
-        try {
-            const m = JSON.parse(localStorage.getItem(MILESTONES_KEY) || '[]');
-            if (!m.includes(tier)) { m.push(tier); localStorage.setItem(MILESTONES_KEY, JSON.stringify(m)); }
-        } catch (e) {}
-    }
-};
-
-// Get pig info by value
-function getPig(value) {
-    return PIGS[value] || { tier: 0, name: '?', color: '#ccc' };
-}
-
-// Get the next pig after a given value (returns null for THE LION PIG)
-function getNextPig(value) {
-    const currentIndex = PIG_VALUES.indexOf(value);
-    if (currentIndex === -1 || currentIndex >= PIG_VALUES.length - 1) {
-        return null; // No next pig (already at max or invalid)
-    }
-    return PIGS[PIG_VALUES[currentIndex + 1]];
-}
-
-// ========== SHARE SYSTEM ==========
-const ShareSystem = {
-    // Check if Web Share API is available
-    canNativeShare() {
-        return navigator.share !== undefined;
-    },
-
-    // Check if can share files (not just text)
-    canShareFiles() {
-        if (!navigator.canShare) return false;
-        const testFile = new File(['test'], 'test.png', { type: 'image/png' });
-        return navigator.canShare({ files: [testFile] });
-    },
-
-    // Generate share image using html2canvas
-    async captureShareCard(shareCardEl) {
-        if (typeof html2canvas === 'undefined') {
-            console.warn('html2canvas not loaded');
-            return null;
-        }
-
-        try {
-            // html2canvas can capture off-screen elements directly
-            const canvas = await html2canvas(shareCardEl, {
-                backgroundColor: null,
-                scale: 2, // Higher quality
-                useCORS: true,
-                allowTaint: true,
-                logging: false
-            });
-
-            return new Promise((resolve) => {
-                canvas.toBlob(resolve, 'image/png');
-            });
-        } catch (e) {
-            console.warn('Could not capture share card:', e);
-            return null;
-        }
-    },
-
-    // Share with Web Share API (native)
-    async nativeShare(text, blob = null) {
-        const shareData = { text };
-
-        if (blob && this.canShareFiles()) {
-            shareData.files = [new File([blob], 'powers-of-pig.png', { type: 'image/png' })];
-        }
-
-        try {
-            await navigator.share(shareData);
-            return 'completed';
-        } catch (e) {
-            if (e.name === 'AbortError') {
-                return 'cancelled';
-            }
-            throw e;
-        }
-    },
-
-    // Fallback: copy text to clipboard
-    async copyToClipboard(text) {
-        try {
-            await navigator.clipboard.writeText(text);
-            return true;
-        } catch (e) {
-            // Fallback for older browsers
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
-            document.body.appendChild(textarea);
-            textarea.select();
-            const success = document.execCommand('copy');
-            document.body.removeChild(textarea);
-            return success;
-        }
-    }
-};
-
-// Local storage keys
-const STORAGE_KEY = 'powersOfPig';
-const TUTORIAL_COMPLETE_KEY = 'pop_tutorial_complete';
-const FIRST_MERGE_CELEBRATED_KEY = 'pop_first_merge_celebrated';
-const CAMPAIGN_STORAGE_KEY = 'pop_campaign';
-
-// ========== SOUND SYSTEM (Web Audio API for iOS compatibility) ==========
-class SoundSystem {
-    constructor() {
-        this.enabled = true;
-        this.audioContext = null;
-        this.buffers = {};  // Cache for decoded AudioBuffers
-        this.loaded = false;
-    }
-
-    // Initialize AudioContext and preload all 17 oink sounds
-    // Must be called from a user gesture handler (e.g., Play button click)
-    async init() {
-        if (this.loaded) return;
-
-        // Create AudioContext - must be in user gesture handler for iOS
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-        // Oink sound file mapping: tier -> filename
-        const oinkFiles = {
-            1: 'oink-01-pip.mp3',
-            2: 'oink-02-sprout.mp3',
-            3: 'oink-03-trotter.mp3',
-            4: 'oink-04-hamlet.mp3',
-            5: 'oink-05-hog.mp3',
-            6: 'oink-06-siroinks.mp3',
-            7: 'oink-07-wiggleton.mp3',
-            8: 'oink-08-baronvonbubble.mp3',
-            9: 'oink-09-sherlockhams.mp3',
-            10: 'oink-10-sirloin.mp3',
-            11: 'oink-11-lordporkington.mp3',
-            12: 'oink-12-neilhamstrong.mp3',
-            13: 'oink-13-erikthepink.mp3',
-            14: 'oink-14-gandalftheham.mp3',
-            15: 'oink-15-hisroyalhogness.mp3',
-            16: 'oink-16-thecosmicsow.mp3',
-            17: 'oink-17-thelionpig.mp3'
-        };
-
-        // Preload all sounds as AudioBuffers
-        for (const [tier, filename] of Object.entries(oinkFiles)) {
-            try {
-                const response = await fetch(`assets/sounds/${filename}`);
-                const arrayBuffer = await response.arrayBuffer();
-                this.buffers[tier] = await this.audioContext.decodeAudioData(arrayBuffer);
-            } catch (e) {
-                // Fail silently - sound just won't play for this tier
-            }
-        }
-
-        this.loaded = true;
-    }
-
-    // Play an oink sound for a specific pig tier (1-17)
-    playOink(tier) {
-        if (!this.enabled || !this.audioContext || !this.buffers[tier]) return;
-
-        // Resume context if suspended (iOS suspends when app goes to background)
-        if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume();
-        }
-
-        try {
-            const source = this.audioContext.createBufferSource();
-            const gainNode = this.audioContext.createGain();
-            source.buffer = this.buffers[tier];
-            gainNode.gain.value = 0.7;
-            source.connect(gainNode);
-            gainNode.connect(this.audioContext.destination);
-            source.start(0);
-        } catch (e) {
-            // Fail silently
-        }
-    }
-
-    // Play a soft pop sound for spawning new tiles (use tier 1 sound quietly)
-    playSpawn() {
-        if (!this.enabled || !this.audioContext || !this.buffers[1]) return;
-
-        if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume();
-        }
-
-        try {
-            const source = this.audioContext.createBufferSource();
-            const gainNode = this.audioContext.createGain();
-            source.buffer = this.buffers[1];
-            source.playbackRate.value = 1.5;  // Play faster for a "pop" feel
-            gainNode.gain.value = 0.2;
-            source.connect(gainNode);
-            gainNode.connect(this.audioContext.destination);
-            source.start(0);
-        } catch (e) {
-            // Fail silently
-        }
-    }
-
-    setEnabled(enabled) {
-        this.enabled = enabled;
-    }
-}
-
-// Global sound system instance
-const soundSystem = new SoundSystem();
-
-// ========== IMAGE PRELOADING ==========
-// Preload all pig images to prevent delay on first appearance
-function preloadPigImages() {
-    Object.values(PIGS).forEach(pig => {
-        const img = new Image();
-        img.src = pig.image;
-    });
-}
-
-// Preload images immediately when script loads
-preloadPigImages();
-
-// ========== HAPTICS SYSTEM (Vibration API) ==========
-// NOTE: Haptics are always enabled, independent of sound toggle
-class HapticsSystem {
-    constructor() {
-        this.supported = 'vibrate' in navigator;
-    }
-
-    // Vibrate with a pattern for a specific pig tier (1-17)
-    // Patterns based on tier groups as specified:
-    // - Tier 1-4: Light quick tap [50]
-    // - Tier 5-8: Medium pulse [100]
-    // - Tier 9-12: Strong thud [150]
-    // - Tier 13-16: Double pulse [75, 50, 75]
-    // - Tier 17: Triumphant pattern [100, 30, 100, 30, 200]
-    vibrateForTier(tier) {
-        if (!this.supported) return;
-
-        let pattern;
-
-        if (tier <= 4) {
-            // Tiers 1-4 (Pip → Hamlet): Light quick tap
-            pattern = [50];
-        } else if (tier <= 8) {
-            // Tiers 5-8 (Hog → Baron von Bubble): Medium pulse
-            pattern = [100];
-        } else if (tier <= 12) {
-            // Tiers 9-12 (Sherlock Hams → Neil Hamstrong): Strong thud
-            pattern = [150];
-        } else if (tier <= 16) {
-            // Tiers 13-16 (Erik the Pink → The Cosmic Sow): Double pulse
-            pattern = [75, 50, 75];
-        } else {
-            // Tier 17 (THE LION PIG): Triumphant pattern!
-            pattern = [100, 30, 100, 30, 200];
-        }
-
-        try {
-            navigator.vibrate(pattern);
-        } catch (e) {
-            // Vibration might fail on some devices - fail silently
-        }
-    }
-
-    // Light tap for spawning new tiles
-    vibrateSpawn() {
-        if (!this.supported) return;
-
-        try {
-            navigator.vibrate(8);
-        } catch (e) {
-            // Fail silently
-        }
-    }
-
-    // Quick feedback for button presses
-    vibrateButton() {
-        if (!this.supported) return;
-
-        try {
-            navigator.vibrate(5);
-        } catch (e) {
-            // Fail silently
-        }
-    }
-
-    // Sad vibration for game over
-    vibrateGameOver() {
-        if (!this.supported) return;
-
-        try {
-            // Descending pattern feels "deflating"
-            navigator.vibrate([100, 100, 80, 100, 60, 100, 40]);
-        } catch (e) {
-            // Fail silently
-        }
-    }
-}
-
-// Global haptics system instance
-const hapticsSystem = new HapticsSystem();
-
 class Game {
     constructor() {
         // Game state
@@ -2054,112 +1707,60 @@ class Game {
 
     // Show feedback modal
     showFeedbackModal(context) {
-        // Reset modal state
-        this.feedbackSendToInput.value = '';
-        this.feedbackImproveTextarea.value = '';
-        this.feedbackContext = context;
-
-        // Track feedback shown
-        Analytics.track('feedback_shown', { context });
-
-        this.showOverlay('feedback');
+        this.feedbackContext = Feedback.showModal({
+            sendToInput: this.feedbackSendToInput,
+            improveTextarea: this.feedbackImproveTextarea,
+            showOverlay: this.showOverlay.bind(this)
+        }, context);
     }
 
     // Handle feedback submission
     async submitFeedback() {
-        // Honeypot check - bots fill this hidden field, humans don't see it
-        const honeypot = document.getElementById('feedback-honeypot');
-        if (honeypot && honeypot.value) {
-            this.closeFeedbackModal();
-            return;
-        }
-
-        // Rate limit: max 1 submission per 60 seconds
-        const RATE_LIMIT_KEY = 'pop_last_feedback';
-        const RATE_LIMIT_MS = 60000;
-        const lastSubmission = sessionStorage.getItem(RATE_LIMIT_KEY);
-        if (lastSubmission && Date.now() - parseInt(lastSubmission) < RATE_LIMIT_MS) {
-            this.closeFeedbackModal();
-            return;
-        }
-
-        const sendToText = this.feedbackSendToInput.value.trim();
-        const improvementText = this.feedbackImproveTextarea.value.trim();
-
-        // Length validation (defense in depth - HTML maxlength is first line)
-        if (sendToText.length > 500 || improvementText.length > 1000) {
-            this.closeFeedbackModal();
-            return;
-        }
-
         // Get game data
         const highestValue = this.getHighestPig();
         const pig = getPig(highestValue);
         const deviceType = this.getDeviceType();
 
-        // Track feedback submitted
-        Analytics.track('feedback_submitted', {
-            context: this.feedbackContext,
-            has_send_to: sendToText.length > 0,
-            has_improvement: improvementText.length > 0
-        });
+        const gameState = {
+            score: this.score,
+            moves: this.moveCount,
+            duration: this.lastGameDuration || 0,
+            highestTier: pig.tier,
+            deviceType: deviceType
+        };
 
-        // Send to Supabase (even if both fields are empty - still captures metadata)
-        try {
-            await fetch(`${SUPABASE_URL}/rest/v1/player_feedback_comments`, {
-                method: 'POST',
-                headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify({
-                    send_to_text: sendToText || null,
-                    improvement_text: improvementText || null,
-                    highest_pig_reached: pig.tier,
-                    score: this.score,
-                    moves: this.moveCount,
-                    duration_seconds: this.lastGameDuration || 0,
-                    device_type: deviceType
-                })
-            });
-            // Mark submission time for rate limiting
-            sessionStorage.setItem('pop_last_feedback', Date.now().toString());
-        } catch (e) {
-            // Fail silently - don't block game flow
-            console.warn('Could not submit feedback:', e);
-        }
+        const inputs = {
+            sendToText: this.feedbackSendToInput.value,
+            improvementText: this.feedbackImproveTextarea.value
+        };
 
+        await Feedback.submit(gameState, inputs, this.feedbackContext);
         this.closeFeedbackModal();
     }
 
     // Skip feedback
     skipFeedback() {
-        // Track feedback skipped
-        Analytics.track('feedback_skipped', { context: this.feedbackContext });
-
+        Feedback.skip(this.feedbackContext);
         this.closeFeedbackModal();
     }
 
     // Close feedback modal
     closeFeedbackModal() {
-        this.hideOverlay('feedback');
-
-        // Handle based on context
-        if (this.feedbackContext === 'gameOver') {
-            // Track game over screen viewed
-            const highestValue = this.capturedBoardState ? this.capturedBoardState.highestValue : this.getHighestPig();
-            const pig = getPig(highestValue);
-            Analytics.track('game_over_screen_viewed', {
-                highest_tier: pig.tier,
-                score: this.score
-            });
-            this.showScreen('gameover');
-        }
-        // For 'inGame' context, just close - return to current game
-
+        const context = this.feedbackContext;
         this.feedbackContext = null;
+
+        Feedback.closeModal({
+            hideOverlay: this.hideOverlay.bind(this),
+            showScreen: this.showScreen.bind(this),
+            trackGameOverScreen: () => {
+                const highestValue = this.capturedBoardState ? this.capturedBoardState.highestValue : this.getHighestPig();
+                const pig = getPig(highestValue);
+                Analytics.track('game_over_screen_viewed', {
+                    highest_tier: pig.tier,
+                    score: this.score
+                });
+            }
+        }, context);
     }
 
     // Handle share button click
@@ -2855,6 +2456,7 @@ class Game {
             moves: this.levelMoves,
             modifier: getLevelModifierType(level)
         });
+        Tracking.levelComplete(level.id, level.world);
 
         // Update score display
         this.levelCompleteScoreValue.textContent = formatNumber(this.score);
@@ -2963,6 +2565,7 @@ class Game {
             modifier: getLevelModifierType(level),
             failure_reason: reason
         });
+        Tracking.levelFail(level.id, level.world);
 
         this.showOverlay('level-failed');
     }
@@ -3445,5 +3048,11 @@ class Game {
 
 // Start the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    Tracking.sessionStart();
     new Game();
 });
+
+// Export for Node/test compatibility
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Game };
+}

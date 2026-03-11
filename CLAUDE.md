@@ -18,9 +18,16 @@ npm run dev    # Start local dev server on port 3000
 src/
   index.html         # Main HTML with all screens (home, game, pause, collection, etc.)
   styles.css         # All styling (responsive, tile colors, animations)
-  game.js            # Core game engine (Game class, state management, rendering)
-  levels.js          # Campaign mode levels, worlds, modifiers, goal validation
+  constants.js       # Supabase config, PIGS definitions, storage keys
   strings.js         # Centralized UI strings with EN/FR translations
+  levels.js          # Campaign mode levels, worlds, modifiers, goal validation
+  utils.js           # Helper functions (getPig, getNextPig, preloadPigImages)
+  analytics.js       # PostHog event tracking and milestone management
+  share.js           # Share system (Web Share API, html2canvas)
+  sound.js           # Sound system (Web Audio API, 17 oink sounds)
+  haptics.js         # Haptics system (Vibration API patterns)
+  game.js            # Core game engine (Game class, state management, rendering)
+  feedback.js        # Feedback system (modal, submission, rate limiting)
   assets/
     pigs/            # 17 pig images (1.pip.png through 17.thelionpig.png)
     sounds/          # 17 oink sounds (oink-01-pip.mp3 through oink-17-thelionpig.mp3)
@@ -77,7 +84,7 @@ Tiles use **absolute positioning with CSS transforms** (`transform: translate(x,
 - `.tile.celebration-scale` - first merge celebration
 
 ### Sound System (Web Audio API)
-Sound uses the **Web Audio API** (`AudioContext` + `AudioBuffer`) instead of `HTMLAudioElement` for iOS compatibility. iOS requires audio unlocked during a user gesture. The `AudioContext` is created on Play tap, which unlocks it. Sounds are preloaded as `AudioBuffer` objects and played via `BufferSourceNode`. The `audioContext.resume()` call handles iOS background suspension.
+Defined in `sound.js`. Sound uses the **Web Audio API** (`AudioContext` + `AudioBuffer`) instead of `HTMLAudioElement` for iOS compatibility. iOS requires audio unlocked during a user gesture. The `AudioContext` is created on Play tap, which unlocks it. Sounds are preloaded as `AudioBuffer` objects and played via `BufferSourceNode`. The `audioContext.resume()` call handles iOS background suspension.
 
 ### Campaign Mode System
 Defined in `levels.js`. Two worlds with 8 levels each.
@@ -111,7 +118,7 @@ Defined in `levels.js`. Two worlds with 8 levels each.
 Players can undo their last move. In campaign mode, `usedUndo` is tracked for analytics. Restores previous grid state, score, and move count.
 
 ### PIGS Constant
-Each tier defined with: `{ tier, name, color, icon, image }` - image paths point to `assets/pigs/` folder.
+Defined in `constants.js`. Each tier defined with: `{ tier, name, color, icon, image }` - image paths point to `assets/pigs/` folder.
 
 ### Screens & Overlays
 
@@ -177,7 +184,7 @@ session_start → game_start → [merges, milestones] → game_over
 ```
 
 **Implementation details:**
-- `Analytics` helper object in game.js handles all tracking with fire-and-forget pattern
+- `Analytics` helper object in `analytics.js` handles all tracking with fire-and-forget pattern
 - Milestones persist in localStorage (`pop_milestones_reached`) to prevent duplicate events across sessions
 - Merge events filtered to tier 6+ to reduce volume
 - Session replay enabled
@@ -244,6 +251,7 @@ Full-screen game over with shareable content for viral growth.
 - **Buttons**: Share (primary), Play Again (secondary), View Board + Home (tertiary text links)
 
 **Share Functionality:**
+- Implemented in `share.js`
 - Uses `html2canvas` library (~40KB CDN) for image capture
 - Share card: 400x500px with pig image, score, message, CTA
 - Web Share API on mobile with image attachment
