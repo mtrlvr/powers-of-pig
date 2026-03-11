@@ -23,6 +23,7 @@ src/
   levels.js          # Campaign mode levels, worlds, modifiers, goal validation
   utils.js           # Helper functions (getPig, getNextPig, preloadPigImages)
   analytics.js       # PostHog event tracking and milestone management
+  tracking.js        # Supabase campaign event logging (session, level complete/fail)
   share.js           # Share system (Web Share API, html2canvas)
   sound.js           # Sound system (Web Audio API, 17 oink sounds)
   haptics.js         # Haptics system (Vibration API patterns)
@@ -190,6 +191,35 @@ session_start → game_start → [merges, milestones] → game_over
 - Session replay enabled
 - PostHog config: `phc_hX8ezASA5I3IAhaSnH0XlcU4ePBW22CvdytKIAUyOtu` on `us.posthog.com`
 
+### Campaign Tracking System (Supabase)
+Minimal event logging for campaign mode, stored directly in Supabase. Designed to answer: how many players, how far did they get, did anyone return?
+
+**Events:**
+| Event | When Triggered | Payload |
+|-------|----------------|---------|
+| `session_start` | Page load | `referrer` |
+| `level_complete` | Campaign level won | `level_id`, `world` |
+| `level_fail` | Campaign level failed | `level_id`, `world` |
+
+**Implementation:**
+- `Tracking` object in `tracking.js` with fire-and-forget pattern
+- Player ID generated via `crypto.randomUUID()`, stored in localStorage (`pop_player_id`)
+- Events sent to Supabase `events` table with `player_id`, `event_type`, `data` (JSONB), `created_at`
+- Same Supabase project as feedback system (config in `constants.js`)
+
+**localStorage key:** `pop_player_id` — persistent UUID for player identification
+
+**Supabase table schema:**
+```sql
+CREATE TABLE events (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  player_id text NOT NULL,
+  event_type text NOT NULL,
+  data jsonb DEFAULT '{}'::jsonb,
+  created_at timestamptz DEFAULT now()
+);
+```
+
 ### Localisation System
 English and French supported. Language toggle visible on all screens.
 
@@ -325,6 +355,7 @@ Full-screen game over with shareable content for viral growth.
 **Infrastructure:**
 - localStorage persistence
 - Supabase feedback storage
+- Supabase campaign tracking (session, level events)
 - PostHog analytics
 - English/French localisation
 
