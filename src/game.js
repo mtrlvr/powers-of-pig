@@ -457,10 +457,12 @@ class Game {
         this.spawnTile();
 
         // Track daily start
+        const dailyModifier = this.currentLevel.modifiers.length > 0 ? this.currentLevel.modifiers[0].type : null;
         Analytics.track('daily_start', {
-            modifier: this.currentLevel.modifiers.length > 0 ? this.currentLevel.modifiers[0].type : 'none',
+            modifier: dailyModifier || 'none',
             seed: this.currentLevel.seed
         });
+        Tracking.dailyStart(dailyModifier);
 
         // Start timer if time limit modifier
         if (this.timeRemaining !== null) {
@@ -488,6 +490,7 @@ class Game {
             streak: progress.streak,
             moves: this.moveCount
         });
+        Tracking.dailyComplete(this.score, progress.streak);
 
         this.showOverlay('daily-complete');
     }
