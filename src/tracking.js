@@ -80,6 +80,28 @@ const Tracking = {
             level_id: levelId,
             world: world
         });
+    },
+
+    /**
+     * Track daily challenge start
+     * @param {string|null} modifier - Modifier type for the day (or null)
+     */
+    dailyStart(modifier) {
+        trackEvent('daily_start', {
+            modifier: modifier
+        });
+    },
+
+    /**
+     * Track daily challenge completion
+     * @param {number} score - Final score
+     * @param {number} streak - Current streak
+     */
+    dailyComplete(score, streak) {
+        trackEvent('daily_complete', {
+            score: score,
+            streak: streak
+        });
     }
 };
 
