@@ -158,6 +158,23 @@ const STRINGS = {
             // Emoji feedback
             howWasLevel: 'How was this level?',
             thanksFeedback: 'Thanks!'
+        },
+
+        // Daily Challenge
+        daily: {
+            button: 'Daily',
+            complete: 'Daily Complete!',
+            dayStreak: 'day streak',
+            backHome: 'Home',
+            alreadyPlayed: 'Come back tomorrow!',
+            todaysChallenge: "Today's Challenge",
+            modifier: {
+                none: 'No modifier',
+                time_limit: 'Time limit: 3 min',
+                move_limit: 'Move limit: 100',
+                blocked_cells: 'Blocked corners',
+                single_cell_movement: 'Slow slide'
+            }
         }
     },
 
@@ -316,6 +333,23 @@ const STRINGS = {
             // Emoji feedback
             howWasLevel: 'Comment était ce niveau ?',
             thanksFeedback: 'Merci !'
+        },
+
+        // Daily Challenge
+        daily: {
+            button: 'Quotidien',
+            complete: 'Défi Réussi !',
+            dayStreak: 'jours consécutifs',
+            backHome: 'Accueil',
+            alreadyPlayed: 'Reviens demain !',
+            todaysChallenge: 'Défi du Jour',
+            modifier: {
+                none: 'Sans modificateur',
+                time_limit: 'Limite de temps : 3 min',
+                move_limit: 'Limite de coups : 100',
+                blocked_cells: 'Coins bloqués',
+                single_cell_movement: 'Glissement lent'
+            }
         }
     }
 };
@@ -379,7 +413,17 @@ function getMidGameShareMessage(score) {
     return `${formattedScore} points and counting!`;
 }
 
+// Generate share message for daily challenge
+function getDailyShareMessage(score, streak) {
+    const lang = getCurrentLanguage();
+    const formattedScore = formatNumber(score);
+    if (lang === 'fr') {
+        return `J'ai marqué ${formattedScore} au défi quotidien de Powers of Pig ! 🔥${streak} jours consécutifs`;
+    }
+    return `I scored ${formattedScore} on today's Powers of Pig daily! 🔥${streak} day streak`;
+}
+
 // Export for use in game.js (or use directly if loaded via script tag)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { STRINGS, getCurrentLanguage, setLanguage, getStrings, toggleLanguage, formatNumber, getShareMessage, getMidGameShareMessage };
+    module.exports = { STRINGS, getCurrentLanguage, setLanguage, getStrings, toggleLanguage, formatNumber, getShareMessage, getMidGameShareMessage, getDailyShareMessage };
 }

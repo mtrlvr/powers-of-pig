@@ -114,6 +114,8 @@ const CAMPAIGN_LEVELS = [
     },
 
     // ========== WORLD 2: THE MUDLANDS (8 levels) ==========
+    // Rebalanced difficulty curve: one new challenge per level, teach before testing
+    // Tier progression: 6 → 6 → 6 → 7 → 7 → 7 → 8 → 9
     {
         id: 9,
         world: 2,
@@ -128,6 +130,17 @@ const CAMPAIGN_LEVELS = [
     {
         id: 10,
         world: 2,
+        name: { en: 'Corner Chaos', fr: 'Chaos des Coins' },
+        goal: {
+            type: 'reach_tier',
+            value: 6,
+            description: { en: 'Reach Sir Oinks', fr: 'Atteins Sire Gruik' }
+        },
+        modifiers: [{ type: 'blocked_cells', positions: [[0, 0], [0, 3], [3, 0], [3, 3]] }]
+    },
+    {
+        id: 11,
+        world: 2,
         name: { en: 'Slow Slide', fr: 'Glissement Lent' },
         goal: {
             type: 'reach_tier',
@@ -137,18 +150,29 @@ const CAMPAIGN_LEVELS = [
         modifiers: [{ type: 'single_cell_movement' }]
     },
     {
-        id: 11,
+        id: 12,
         world: 2,
-        name: { en: 'Deeper Mud', fr: 'Boue Profonde' },
+        name: { en: 'Rising Higher', fr: 'Vers les Sommets' },
         goal: {
             type: 'reach_tier',
             value: 7,
             description: { en: 'Reach Wiggleton', fr: 'Atteins Wiggleton' }
         },
-        modifiers: [{ type: 'blocked_cells', positions: [[1, 1], [2, 2], [1, 2]] }]
+        modifiers: []
     },
     {
-        id: 12,
+        id: 13,
+        world: 2,
+        name: { en: 'Blocked Paths', fr: 'Chemins Bloqués' },
+        goal: {
+            type: 'reach_tier',
+            value: 7,
+            description: { en: 'Reach Wiggleton', fr: 'Atteins Wiggleton' }
+        },
+        modifiers: [{ type: 'blocked_cells', positions: [[0, 1], [3, 2]] }]
+    },
+    {
+        id: 14,
         world: 2,
         name: { en: 'Race Through Mud', fr: 'Course dans la Boue' },
         goal: {
@@ -162,43 +186,15 @@ const CAMPAIGN_LEVELS = [
         ]
     },
     {
-        id: 13,
-        world: 2,
-        name: { en: 'Score in the Swamp', fr: 'Score dans le Marais' },
-        goal: {
-            type: 'reach_score',
-            value: 1000,
-            description: { en: 'Score 1000 points', fr: 'Marque 1000 points' }
-        },
-        modifiers: [{ type: 'blocked_cells', positions: [[0, 1], [3, 2]] }]
-    },
-    {
-        id: 14,
-        world: 2,
-        name: { en: 'Tight Bog', fr: 'Marécage Étroit' },
-        goal: {
-            type: 'reach_tier',
-            value: 6,
-            description: { en: 'Reach Sir Oinks', fr: 'Atteins Sire Gruik' }
-        },
-        modifiers: [
-            { type: 'small_board', size: 3 },
-            { type: 'blocked_cells', positions: [[0, 0], [2, 2]] }
-        ]
-    },
-    {
         id: 15,
         world: 2,
-        name: { en: 'Precision Mire', fr: 'Bourbier de Précision' },
+        name: { en: 'Tight Squeeze', fr: 'Passage Étroit' },
         goal: {
             type: 'reach_tier',
-            value: 7,
-            description: { en: 'Reach Wiggleton', fr: 'Atteins Wiggleton' }
+            value: 8,
+            description: { en: 'Reach Baron von Bubble', fr: 'Atteins Baron von Bulle' }
         },
-        modifiers: [
-            { type: 'single_cell_movement' },
-            { type: 'move_limit', moves: 70 }
-        ]
+        modifiers: [{ type: 'small_board', size: 3 }]
     },
     {
         id: 16,
@@ -210,7 +206,7 @@ const CAMPAIGN_LEVELS = [
             description: { en: 'Reach Sherlock Hams', fr: 'Atteins Sherlock Jambons' }
         },
         modifiers: [
-            { type: 'blocked_cells', positions: [[0, 3], [0, 0], [3, 0], [3, 3]], },
+            { type: 'blocked_cells', positions: [[0, 0], [0, 3], [3, 0], [3, 3]] },
             { type: 'move_limit', moves: 120 }
         ]
     }

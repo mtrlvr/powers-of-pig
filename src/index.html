@@ -29,6 +29,10 @@
         <h1 class="home-title" data-i18n="home.title">Powers of Pig</h1>
         <div class="home-pig">🐷</div>
         <button class="btn btn-primary" id="campaign-button" data-i18n="home.play">Play</button>
+        <button class="btn btn-secondary btn-daily" id="daily-button">
+            <span data-i18n="daily.button">Daily</span>
+            <span class="streak-badge" id="home-streak-badge"></span>
+        </button>
         <div class="home-secondary-links">
             <a class="subtle-link" id="endless-button" data-i18n="campaign.classicMode">Classic Mode</a>
             <span class="link-separator">•</span>
@@ -199,6 +203,29 @@
         </div>
     </div>
 
+    <!-- DAILY COMPLETE OVERLAY -->
+    <div class="overlay" id="daily-complete-overlay">
+        <div class="modal daily-complete-modal">
+            <h2 data-i18n="daily.complete">Daily Complete!</h2>
+            <div class="daily-streak-display">
+                <span class="streak-fire">🔥</span>
+                <span class="streak-count" id="daily-streak-count">1</span>
+                <span data-i18n="daily.dayStreak">day streak</span>
+            </div>
+            <div class="daily-score-section">
+                <span data-i18n="game.score">Score:</span>
+                <span id="daily-final-score">0</span>
+            </div>
+            <div class="daily-buttons">
+                <button class="btn btn-primary" id="daily-share-button">
+                    <span class="share-icon">📤</span>
+                    <span data-i18n="share.buttonLabel">Share</span>
+                </button>
+                <button class="btn btn-secondary" id="daily-home-button" data-i18n="daily.backHome">Home</button>
+            </div>
+        </div>
+    </div>
+
     <!-- WORLD INTRODUCTION OVERLAY -->
     <div class="overlay" id="world-intro-overlay">
         <div class="modal world-intro-modal">
@@ -333,6 +360,7 @@
     <script src="haptics.js"></script>
     <script src="feedback.js"></script>
     <script src="tracking.js"></script>
+    <script src="daily.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
