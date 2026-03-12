@@ -2282,3 +2282,119 @@ body {
         height: 60px;
     }
 }
+
+/* ========== DAILY CHALLENGE ========== */
+
+/* Daily button on home screen */
+.btn-daily {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    background: linear-gradient(to bottom, #e8a050, #d08030);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+
+.btn-daily:hover {
+    background: linear-gradient(to bottom, #d89040, #c07020);
+}
+
+/* Streak badge on daily button */
+.streak-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.streak-badge:empty {
+    display: none;
+}
+
+/* Daily complete overlay */
+.daily-complete-modal {
+    text-align: center;
+    padding: 30px 25px;
+}
+
+.daily-streak-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 20px 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #5a4a40;
+}
+
+.streak-fire {
+    font-size: 2rem;
+    animation: fireFlicker 1s ease-in-out infinite;
+}
+
+@keyframes fireFlicker {
+    0%, 100% { transform: scale(1) rotate(-5deg); }
+    50% { transform: scale(1.1) rotate(5deg); }
+}
+
+.streak-count {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #e85a4a;
+}
+
+.daily-score-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1.2rem;
+    color: #5a4a40;
+    margin-bottom: 20px;
+}
+
+.daily-score-section span:last-child {
+    font-weight: 700;
+    font-size: 1.4rem;
+}
+
+.daily-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.daily-buttons .btn {
+    width: 100%;
+}
+
+/* Mobile adjustments */
+@media (max-width: 400px) {
+    .daily-streak-display {
+        font-size: 1.2rem;
+    }
+
+    .streak-fire {
+        font-size: 1.6rem;
+    }
+
+    .streak-count {
+        font-size: 1.6rem;
+    }
+
+    .daily-score-section {
+        font-size: 1rem;
+    }
+
+    .daily-score-section span:last-child {
+        font-size: 1.2rem;
+    }
+}

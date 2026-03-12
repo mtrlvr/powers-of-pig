@@ -39,6 +39,9 @@ class Game {
         // Campaign mode state
         this.campaignMode = false;
         this.currentLevel = null;
+
+        // Daily challenge state
+        this.dailyMode = false;
         this.currentWorldId = 1;
         this.levelMoves = 0;
         this.levelMerges = 0;
@@ -119,7 +122,8 @@ class Game {
             'view-board': document.getElementById('view-board-overlay'),
             'level-complete': document.getElementById('level-complete-overlay'),
             'level-failed': document.getElementById('level-failed-overlay'),
-            'world-intro': document.getElementById('world-intro-overlay')
+            'world-intro': document.getElementById('world-intro-overlay'),
+            'daily-complete': document.getElementById('daily-complete-overlay')
         };
 
         // Feedback modal elements
@@ -195,6 +199,12 @@ class Game {
         // Level failed overlay elements
         this.levelFailedProgress = document.getElementById('level-failed-progress');
         this.levelFailedTip = document.getElementById('level-failed-tip');
+
+        // Daily challenge elements
+        this.dailyButton = document.getElementById('daily-button');
+        this.homeStreakBadge = document.getElementById('home-streak-badge');
+        this.dailyStreakCount = document.getElementById('daily-streak-count');
+        this.dailyFinalScore = document.getElementById('daily-final-score');
     }
 
     // Show a specific screen
@@ -224,6 +234,11 @@ class Game {
         // Populate collection screen
         if (screenName === 'collection') {
             this.renderCollection();
+        }
+
+        // Update daily badge on home screen
+        if (screenName === 'home') {
+            this.updateDailyBadge();
         }
     }
 
@@ -307,8 +322,9 @@ class Game {
         soundSystem.setEnabled(this.soundEnabled);
         // Haptics are always on, independent of sound toggle
 
-        // Ensure campaign mode is off for endless
+        // Ensure campaign/daily mode is off for endless
         this.campaignMode = false;
+        this.dailyMode = false;
         this.currentLevel = null;
 
         // Reset to standard 4x4 grid for endless mode
@@ -363,6 +379,128 @@ class Game {
         this.updateScore();
         this.showScreen('game');
         // Note: render() is called by showScreen('game') after layout is complete
+    }
+
+    // Start daily challenge
+    startDailyChallenge() {
+        // Check if already completed today
+        if (hasCompletedToday()) {
+            // Show "already played" message
+            const strings = getStrings();
+            alert(strings.daily.alreadyPlayed);
+            return;
+        }
+
+        // Initialize sound on first user interaction
+        soundSystem.init();
+        soundSystem.setEnabled(this.soundEnabled);
+
+        // Set daily mode
+        this.dailyMode = true;
+        this.campaignMode = false;
+        this.currentLevel = generateDailyLevel();
+
+        // Reset to standard 4x4 grid
+        this.size = 4;
+        this.boardContainer.setAttribute('data-size', '4');
+
+        // Apply daily modifiers
+        this.blockedCells.clear();
+        this.singleCellMovement = false;
+        this.timeRemaining = null;
+        this.moveLimit = null;
+
+        if (this.currentLevel.modifiers && this.currentLevel.modifiers.length > 0) {
+            for (const mod of this.currentLevel.modifiers) {
+                if (mod.type === 'time_limit') {
+                    this.timeRemaining = mod.seconds;
+                }
+                if (mod.type === 'move_limit') {
+                    this.moveLimit = mod.moves;
+                }
+                if (mod.type === 'blocked_cells' && mod.positions) {
+                    mod.positions.forEach(([row, col]) => {
+                        this.blockedCells.add(`${row},${col}`);
+                    });
+                }
+                if (mod.type === 'single_cell_movement') {
+                    this.singleCellMovement = true;
+                }
+            }
+        }
+
+        // Reset game state
+        this.score = 0;
+        this.gameOver = false;
+        this.won = false;
+        this.keepPlaying = false;
+        this.previousState = null;
+        this.gameStartTime = Date.now();
+        this.moveCount = 0;
+        this.levelMoves = 0;
+
+        // Clear any active timers
+        this.clearInactivityTimer();
+        this.stopLevelTimer();
+
+        // Clear tile elements for fresh start
+        this.tileContainer.innerHTML = '';
+        this.tileElements.clear();
+        this.cellPositions = null;
+
+        this.createBackgroundCells();
+
+        // Initialize grid
+        this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
+        this.tutorialActive = false;
+        this.spawnTile();
+        this.spawnTile();
+
+        // Track daily start
+        Analytics.track('daily_start', {
+            modifier: this.currentLevel.modifiers.length > 0 ? this.currentLevel.modifiers[0].type : 'none',
+            seed: this.currentLevel.seed
+        });
+
+        // Start timer if time limit modifier
+        if (this.timeRemaining !== null) {
+            this.startLevelTimer();
+        }
+
+        // Update UI and show game
+        this.updateScore();
+        this.updateCampaignUI();
+        this.showScreen('game');
+    }
+
+    // Show daily complete overlay
+    showDailyComplete() {
+        const progress = recordDailyComplete(this.score);
+        const strings = getStrings();
+
+        // Update overlay content
+        this.dailyStreakCount.textContent = progress.streak;
+        this.dailyFinalScore.textContent = formatNumber(this.score);
+
+        // Track analytics
+        Analytics.track('daily_complete', {
+            score: this.score,
+            streak: progress.streak,
+            moves: this.moveCount
+        });
+
+        this.showOverlay('daily-complete');
+    }
+
+    // Update daily button badge on home screen
+    updateDailyBadge() {
+        const streak = getCurrentStreak();
+        if (streak > 0) {
+            this.homeStreakBadge.textContent = `🔥${streak}`;
+            this.homeStreakBadge.style.display = 'inline';
+        } else {
+            this.homeStreakBadge.style.display = 'none';
+        }
     }
 
     // Create the empty cell backgrounds
@@ -1432,6 +1570,10 @@ class Game {
             if (this.campaignMode) {
                 // Campaign mode: show failure screen
                 setTimeout(() => this.failCampaignLevel(), 300);
+            } else if (this.dailyMode) {
+                // Daily challenge: show daily complete overlay
+                this.updateHighScore();
+                setTimeout(() => this.showDailyComplete(), 300);
             } else {
                 // Endless mode: show game over screen
                 this.updateHighScore();
@@ -1777,7 +1919,10 @@ class Game {
 
         // Generate share message based on context
         let shareMessage;
-        if (context === 'gameOver') {
+        if (context === 'daily') {
+            const streak = getCurrentStreak();
+            shareMessage = getDailyShareMessage(scoreToShare, streak);
+        } else if (context === 'gameOver') {
             shareMessage = getShareMessage(localizedName, scoreToShare);
         } else {
             shareMessage = getMidGameShareMessage(this.score);
@@ -2750,6 +2895,23 @@ class Game {
 
         document.getElementById('collection-button').addEventListener('click', () => {
             this.showScreen('collection');
+        });
+
+        // Daily challenge button
+        this.dailyButton.addEventListener('click', () => {
+            this.startDailyChallenge();
+        });
+
+        // Daily complete overlay buttons
+        document.getElementById('daily-home-button').addEventListener('click', () => {
+            this.hideOverlay('daily-complete');
+            this.dailyMode = false;
+            this.showScreen('home');
+            this.updateDailyBadge();
+        });
+
+        document.getElementById('daily-share-button').addEventListener('click', () => {
+            this.handleShare('daily');
         });
 
         // World select back button
