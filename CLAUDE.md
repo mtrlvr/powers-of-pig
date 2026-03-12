@@ -12,6 +12,18 @@ Powers of Pig is a mobile-first 2048 clone. Numbers are replaced by increasingly
 npm run dev    # Start local dev server on port 3000
 ```
 
+## gstack
+
+Use `/browse` from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
+
+**Available skills:**
+- `/plan-ceo-review` — CEO-level plan review
+- `/plan-eng-review` — Engineering plan review
+- `/review` — Code review
+- `/ship` — Ship code
+- `/browse` — Web browsing
+- `/retro` — Retrospective
+
 ## Project Structure
 
 ```
