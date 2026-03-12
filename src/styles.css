@@ -2376,41 +2376,6 @@ body {
     width: 100%;
 }
 
-/* Daily header in game (similar to campaign header) */
-.daily-header {
-    text-align: center;
-    margin-bottom: 12px;
-}
-
-.daily-header-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #5a4a40;
-}
-
-.daily-header-modifier {
-    font-size: 0.9rem;
-    color: #8a7a70;
-    margin-top: 4px;
-}
-
-/* Already played state */
-.daily-already-played {
-    text-align: center;
-    padding: 20px;
-    color: #8a7a70;
-}
-
-.daily-already-played-icon {
-    font-size: 3rem;
-    margin-bottom: 10px;
-}
-
-.daily-already-played-text {
-    font-size: 1.1rem;
-    margin-bottom: 15px;
-}
-
 /* Mobile adjustments */
 @media (max-width: 400px) {
     .daily-streak-display {

@@ -324,13 +324,13 @@ describe('getLevelModifierType - comprehensive tests', () => {
   });
 
   it('returns first modifier for levels with multiple modifiers', () => {
-    // Level 12 has both single_cell_movement and time_limit
-    const level12 = getLevelById(12);
-    expect(getLevelModifierType(level12)).toBe('single_cell_movement');
-
-    // Level 14 has small_board and blocked_cells
+    // Level 14 has both single_cell_movement and time_limit
     const level14 = getLevelById(14);
-    expect(getLevelModifierType(level14)).toBe('small_board');
+    expect(getLevelModifierType(level14)).toBe('single_cell_movement');
+
+    // Level 16 has blocked_cells and move_limit
+    const level16 = getLevelById(16);
+    expect(getLevelModifierType(level16)).toBe('blocked_cells');
   });
 
   it('returns null for empty object without modifiers', () => {

@@ -273,9 +273,9 @@ describe('Campaign Mode - Modifier Definitions', () => {
       });
     });
 
-    it('Level 12 has single_cell_movement modifier', () => {
-      const level12 = getLevelById(12);
-      const singleCellMod = level12.modifiers.find(m => m.type === 'single_cell_movement');
+    it('Level 11 has single_cell_movement modifier', () => {
+      const level11 = getLevelById(11);
+      const singleCellMod = level11.modifiers.find(m => m.type === 'single_cell_movement');
       expect(singleCellMod).toBeDefined();
     });
   });
@@ -296,11 +296,11 @@ describe('Campaign Mode - Modifier Definitions', () => {
       });
     });
 
-    it('Level 14 has multiple modifiers (small_board + blocked_cells)', () => {
+    it('Level 14 has multiple modifiers (single_cell_movement + time_limit)', () => {
       const level14 = getLevelById(14);
       const modTypes = level14.modifiers.map(m => m.type);
-      expect(modTypes).toContain('small_board');
-      expect(modTypes).toContain('blocked_cells');
+      expect(modTypes).toContain('single_cell_movement');
+      expect(modTypes).toContain('time_limit');
     });
   });
 });
