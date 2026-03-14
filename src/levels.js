@@ -18,6 +18,14 @@ const WORLDS = [
             en: 'Navigate mud patches and master strategic movement',
             fr: 'Défie les marais et maîtrise tes déplacements'
         }
+    },
+    {
+        id: 3,
+        name: { en: 'The City', fr: 'La Ville' },
+        description: {
+            en: 'Conquer the urban jungle and reach new heights',
+            fr: 'Conquiers la jungle urbaine et atteins de nouveaux sommets'
+        }
     }
 ];
 
@@ -114,8 +122,8 @@ const CAMPAIGN_LEVELS = [
     },
 
     // ========== WORLD 2: THE MUDLANDS (8 levels) ==========
-    // Rebalanced difficulty curve: one new challenge per level, teach before testing
-    // Tier progression: 6 → 6 → 6 → 7 → 7 → 7 → 8 → 9
+    // Rebalanced difficulty curve: teach single_cell_movement gradually
+    // Tier progression: 6 → 6 → 4 → 5 → 6 → 6 → 7 → 7
     {
         id: 9,
         world: 2,
@@ -144,13 +152,46 @@ const CAMPAIGN_LEVELS = [
         name: { en: 'Slow Slide', fr: 'Glissement Lent' },
         goal: {
             type: 'reach_tier',
+            value: 4,
+            description: { en: 'Reach Hamlet', fr: 'Atteins Goret' }
+        },
+        modifiers: [{ type: 'single_cell_movement' }]
+    },
+    {
+        id: 12,
+        world: 2,
+        name: { en: 'Steady Steps', fr: 'Pas Réguliers' },
+        goal: {
+            type: 'reach_tier',
+            value: 5,
+            description: { en: 'Reach Hog', fr: 'Atteins Gros Cochon' }
+        },
+        modifiers: [{ type: 'single_cell_movement' }]
+    },
+    {
+        id: 13,
+        world: 2,
+        name: { en: 'Finding Rhythm', fr: 'Trouver le Rythme' },
+        goal: {
+            type: 'reach_tier',
             value: 6,
             description: { en: 'Reach Sir Oinks', fr: 'Atteins Sire Gruik' }
         },
         modifiers: [{ type: 'single_cell_movement' }]
     },
     {
-        id: 12,
+        id: 14,
+        world: 2,
+        name: { en: 'Quick Mud', fr: 'Boue Rapide' },
+        goal: {
+            type: 'reach_tier',
+            value: 6,
+            description: { en: 'Reach Sir Oinks', fr: 'Atteins Sire Gruik' }
+        },
+        modifiers: [{ type: 'time_limit', seconds: 120 }]
+    },
+    {
+        id: 15,
         world: 2,
         name: { en: 'Rising Higher', fr: 'Vers les Sommets' },
         goal: {
@@ -161,20 +202,35 @@ const CAMPAIGN_LEVELS = [
         modifiers: []
     },
     {
-        id: 13,
+        id: 16,
         world: 2,
-        name: { en: 'Blocked Paths', fr: 'Chemins Bloqués' },
+        name: { en: 'The Deep Muck', fr: 'La Boue Profonde' },
         goal: {
             type: 'reach_tier',
             value: 7,
             description: { en: 'Reach Wiggleton', fr: 'Atteins Wiggleton' }
         },
-        modifiers: [{ type: 'blocked_cells', positions: [[0, 1], [3, 2]] }]
+        modifiers: [{ type: 'small_board', size: 3 }]
+    },
+
+    // ========== WORLD 3: THE CITY (8 levels) ==========
+    // Advanced challenges combining mechanics from Worlds 1-2
+    // Tier progression: 7 → 7 → 8 → 8 → 8 → 9 → 9 → 10
+    {
+        id: 17,
+        world: 3,
+        name: { en: 'City Limits', fr: 'Limites de la Ville' },
+        goal: {
+            type: 'reach_tier',
+            value: 7,
+            description: { en: 'Reach Wiggleton', fr: 'Atteins Wiggleton' }
+        },
+        modifiers: [{ type: 'blocked_cells', positions: [[1, 1], [2, 2]] }]
     },
     {
-        id: 14,
-        world: 2,
-        name: { en: 'Race Through Mud', fr: 'Course dans la Boue' },
+        id: 18,
+        world: 3,
+        name: { en: 'Rush Hour', fr: 'Heure de Pointe' },
         goal: {
             type: 'reach_tier',
             value: 7,
@@ -182,13 +238,24 @@ const CAMPAIGN_LEVELS = [
         },
         modifiers: [
             { type: 'single_cell_movement' },
-            { type: 'time_limit', seconds: 120 }
+            { type: 'time_limit', seconds: 150 }
         ]
     },
     {
-        id: 15,
-        world: 2,
-        name: { en: 'Tight Squeeze', fr: 'Passage Étroit' },
+        id: 19,
+        world: 3,
+        name: { en: 'Penthouse', fr: 'Penthouse' },
+        goal: {
+            type: 'reach_tier',
+            value: 8,
+            description: { en: 'Reach Baron von Bubble', fr: 'Atteins Baron von Bulle' }
+        },
+        modifiers: []
+    },
+    {
+        id: 20,
+        world: 3,
+        name: { en: 'Narrow Alleys', fr: 'Ruelles Étroites' },
         goal: {
             type: 'reach_tier',
             value: 8,
@@ -197,18 +264,51 @@ const CAMPAIGN_LEVELS = [
         modifiers: [{ type: 'small_board', size: 3 }]
     },
     {
-        id: 16,
-        world: 2,
-        name: { en: 'The Deep Muck', fr: 'La Boue Profonde' },
+        id: 21,
+        world: 3,
+        name: { en: 'Traffic Jam', fr: 'Embouteillage' },
+        goal: {
+            type: 'reach_tier',
+            value: 8,
+            description: { en: 'Reach Baron von Bubble', fr: 'Atteins Baron von Bulle' }
+        },
+        modifiers: [{ type: 'blocked_cells', positions: [[0, 0], [0, 3], [3, 0], [3, 3]] }]
+    },
+    {
+        id: 22,
+        world: 3,
+        name: { en: 'Metro Sprint', fr: 'Sprint du Métro' },
+        goal: {
+            type: 'reach_tier',
+            value: 9,
+            description: { en: 'Reach Sherlock Hams', fr: 'Atteins Sherlock Jambons' }
+        },
+        modifiers: [{ type: 'time_limit', seconds: 180 }]
+    },
+    {
+        id: 23,
+        world: 3,
+        name: { en: 'Gridlock', fr: 'Blocage Total' },
         goal: {
             type: 'reach_tier',
             value: 9,
             description: { en: 'Reach Sherlock Hams', fr: 'Atteins Sherlock Jambons' }
         },
         modifiers: [
-            { type: 'blocked_cells', positions: [[0, 0], [0, 3], [3, 0], [3, 3]] },
-            { type: 'move_limit', moves: 120 }
+            { type: 'single_cell_movement' },
+            { type: 'blocked_cells', positions: [[0, 1], [3, 2]] }
         ]
+    },
+    {
+        id: 24,
+        world: 3,
+        name: { en: 'Skyscraper', fr: 'Gratte-Ciel' },
+        goal: {
+            type: 'reach_tier',
+            value: 10,
+            description: { en: 'Reach Sir Loin', fr: 'Atteins Sir Loin' }
+        },
+        modifiers: [{ type: 'move_limit', moves: 150 }]
     }
 ];
 
@@ -264,6 +364,11 @@ function isWorldUnlocked(worldId, campaignProgress) {
     // World 2 requires completing all of World 1 (level 8)
     if (worldId === 2) {
         return campaignProgress.completedLevels[8] !== undefined;
+    }
+
+    // World 3 requires completing all of World 2 (level 16)
+    if (worldId === 3) {
+        return campaignProgress.completedLevels[16] !== undefined;
     }
 
     return false;
