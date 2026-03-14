@@ -24,7 +24,7 @@ Features in Powers of Pig.
 
 - ✅ World 1: The Farm (8 levels)
 - ✅ World 2: The Mudlands (8 levels)
-- 📋 World 3: The City
+- ✅ World 3: The City (8 levels)
 - 📋 World 4: The Cosmos
 - ✅ Level goals
 - ✅ Level modifiers

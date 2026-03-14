@@ -22,14 +22,15 @@ describe('levels.js smoke test', () => {
     expect(level.world).toBe(1);
   });
 
-  it('WORLDS contains 2 worlds', () => {
-    expect(WORLDS).toHaveLength(2);
+  it('WORLDS contains 3 worlds', () => {
+    expect(WORLDS).toHaveLength(3);
     expect(WORLDS[0].id).toBe(1);
     expect(WORLDS[1].id).toBe(2);
+    expect(WORLDS[2].id).toBe(3);
   });
 
-  it('CAMPAIGN_LEVELS contains 16 levels', () => {
-    expect(CAMPAIGN_LEVELS).toHaveLength(16);
+  it('CAMPAIGN_LEVELS contains 24 levels', () => {
+    expect(CAMPAIGN_LEVELS).toHaveLength(24);
   });
 
   it('getLevelsForWorld returns correct levels', () => {
@@ -226,9 +227,17 @@ describe('isWorldUnlocked - edge cases', () => {
     expect(isWorldUnlocked(2, progress9)).toBe(true);
   });
 
-  it('returns false for undefined world IDs', () => {
+  it('World 3 unlocks after completing level 16', () => {
     const progress = { completedLevels: {} };
     expect(isWorldUnlocked(3, progress)).toBe(false);
+
+    const progress16 = { completedLevels: { 16: { score: 100 } } };
+    expect(isWorldUnlocked(3, progress16)).toBe(true);
+  });
+
+  it('returns false for undefined world IDs', () => {
+    const progress = { completedLevels: {} };
+    expect(isWorldUnlocked(4, progress)).toBe(false);
     expect(isWorldUnlocked(100, progress)).toBe(false);
   });
 });
@@ -324,13 +333,13 @@ describe('getLevelModifierType - comprehensive tests', () => {
   });
 
   it('returns first modifier for levels with multiple modifiers', () => {
-    // Level 14 has both single_cell_movement and time_limit
-    const level14 = getLevelById(14);
-    expect(getLevelModifierType(level14)).toBe('single_cell_movement');
+    // Level 18 has both single_cell_movement and time_limit
+    const level18 = getLevelById(18);
+    expect(getLevelModifierType(level18)).toBe('single_cell_movement');
 
-    // Level 16 has blocked_cells and move_limit
-    const level16 = getLevelById(16);
-    expect(getLevelModifierType(level16)).toBe('blocked_cells');
+    // Level 23 has single_cell_movement and blocked_cells
+    const level23 = getLevelById(23);
+    expect(getLevelModifierType(level23)).toBe('single_cell_movement');
   });
 
   it('returns null for empty object without modifiers', () => {
@@ -377,6 +386,13 @@ describe('CAMPAIGN_LEVELS data integrity', () => {
     expect(world2Levels[7].id).toBe(16);
   });
 
+  it('World 3 has 8 levels (17-24)', () => {
+    const world3Levels = CAMPAIGN_LEVELS.filter(l => l.world === 3);
+    expect(world3Levels).toHaveLength(8);
+    expect(world3Levels[0].id).toBe(17);
+    expect(world3Levels[7].id).toBe(24);
+  });
+
   it('all levels have required goal properties', () => {
     CAMPAIGN_LEVELS.forEach(level => {
       expect(level.goal).toHaveProperty('type');
@@ -414,13 +430,14 @@ describe('CAMPAIGN_LEVELS data integrity', () => {
 });
 
 describe('WORLDS data integrity', () => {
-  it('has exactly 2 worlds', () => {
-    expect(WORLDS).toHaveLength(2);
+  it('has exactly 3 worlds', () => {
+    expect(WORLDS).toHaveLength(3);
   });
 
   it('worlds have sequential IDs', () => {
     expect(WORLDS[0].id).toBe(1);
     expect(WORLDS[1].id).toBe(2);
+    expect(WORLDS[2].id).toBe(3);
   });
 
   it('all worlds have localized names and descriptions', () => {
@@ -430,6 +447,12 @@ describe('WORLDS data integrity', () => {
       expect(world.description).toHaveProperty('en');
       expect(world.description).toHaveProperty('fr');
     });
+  });
+
+  it('World 3 is The City', () => {
+    const world3 = getWorldById(3);
+    expect(world3.name.en).toBe('The City');
+    expect(world3.name.fr).toBe('La Ville');
   });
 });
 

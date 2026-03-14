@@ -100,13 +100,14 @@ Tiles use **absolute positioning with CSS transforms** (`transform: translate(x,
 Defined in `sound.js`. Sound uses the **Web Audio API** (`AudioContext` + `AudioBuffer`) instead of `HTMLAudioElement` for iOS compatibility. iOS requires audio unlocked during a user gesture. The `AudioContext` is created on Play tap, which unlocks it. Sounds are preloaded as `AudioBuffer` objects and played via `BufferSourceNode`. The `audioContext.resume()` call handles iOS background suspension.
 
 ### Campaign Mode System
-Defined in `levels.js`. Two worlds with 8 levels each.
+Defined in `levels.js`. Three worlds with 8 levels each.
 
 **Worlds:**
 | World | Name | Levels | Unlocks When |
 |-------|------|--------|--------------|
 | 1 | The Farm | 1-8 | Always open |
 | 2 | The Mudlands | 9-16 | Complete World 1 |
+| 3 | The City | 17-24 | Complete World 2 |
 
 **Goal Types:**
 - `reach_tier` — Create a pig of tier X
@@ -332,7 +333,7 @@ Full-screen game over with shareable content for viral growth.
 ## Current Features
 
 **Game Modes:**
-- Campaign Mode — 2 worlds, 16 levels, progressive difficulty
+- Campaign Mode — 3 worlds, 24 levels, progressive difficulty
 - Classic Mode — Endless 4x4, unlocks after World 1
 
 **Core Gameplay:**
