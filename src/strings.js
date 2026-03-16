@@ -7,7 +7,7 @@ const STRINGS = {
         // Home Screen
         home: {
             title: 'Powers of Pig',
-            play: 'Play',
+            play: 'Campaign',
             collection: 'Collection',
             highScore: 'High Score:'
         },
@@ -164,7 +164,7 @@ const STRINGS = {
 
         // Daily Challenge
         daily: {
-            button: 'Daily',
+            button: 'Daily Challenge',
             complete: 'Daily Complete!',
             dayStreak: 'day streak',
             backHome: 'Home',
@@ -184,7 +184,7 @@ const STRINGS = {
         // Home Screen
         home: {
             title: 'Gruik',
-            play: 'Jouer',
+            play: 'Campagne',
             collection: 'Collection',
             highScore: 'Meilleur score :'
         },
@@ -341,7 +341,7 @@ const STRINGS = {
 
         // Daily Challenge
         daily: {
-            button: 'Quotidien',
+            button: 'Défi du jour',
             complete: 'Défi Réussi !',
             dayStreak: 'jours consécutifs',
             backHome: 'Accueil',
