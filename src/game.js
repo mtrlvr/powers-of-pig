@@ -123,6 +123,7 @@ class Game {
             'level-complete': document.getElementById('level-complete-overlay'),
             'level-failed': document.getElementById('level-failed-overlay'),
             'world-intro': document.getElementById('world-intro-overlay'),
+            'level-intro': document.getElementById('level-intro-overlay'),
             'daily-complete': document.getElementById('daily-complete-overlay')
         };
 
@@ -185,6 +186,7 @@ class Game {
         this.endlessButton = document.getElementById('endless-button');
 
         // Level complete overlay elements
+        this.levelCompleteAchievement = document.getElementById('level-complete-achievement');
         this.levelCompleteScoreValue = document.getElementById('level-complete-score-value');
         this.pigUnlockSection = document.getElementById('pig-unlock-section');
         this.pigUnlockImage = document.getElementById('pig-unlock-image');
@@ -199,6 +201,13 @@ class Game {
         // Level failed overlay elements
         this.levelFailedProgress = document.getElementById('level-failed-progress');
         this.levelFailedTip = document.getElementById('level-failed-tip');
+
+        // Level intro overlay elements
+        this.levelIntroNumber = document.getElementById('level-intro-number');
+        this.levelIntroName = document.getElementById('level-intro-name');
+        this.levelIntroGoal = document.getElementById('level-intro-goal');
+        this.levelIntroModifiers = document.getElementById('level-intro-modifiers');
+        this.levelIntroStartButton = document.getElementById('level-intro-start-button');
 
         // Daily challenge elements
         this.dailyButton = document.getElementById('daily-button');
@@ -1764,7 +1773,9 @@ class Game {
     }
 
     updateHighScoreDisplay() {
-        this.highScoreElement.textContent = this.highScore;
+        if (this.highScoreElement) {
+            this.highScoreElement.textContent = this.highScore;
+        }
     }
 
     // Show game over screen
@@ -2150,7 +2161,8 @@ class Game {
 
     // Set up language toggle button event listeners
     setupLanguageToggles() {
-        document.querySelectorAll('.lang-toggle').forEach(btn => {
+        const buttons = document.querySelectorAll('.lang-toggle');
+        buttons.forEach(btn => {
             btn.addEventListener('click', () => {
                 toggleLanguage();
                 this.updateAllText();
@@ -2245,10 +2257,12 @@ class Game {
                     this.showLevelSelect(world.id);
                 });
             } else {
+                const unlockKey = `completeWorld${world.id - 1}`;
+                const unlockText = strings.campaign[unlockKey] || (console.warn(`Missing string: campaign.${unlockKey}`), strings.campaign.completeWorld1);
                 button.innerHTML = `
                     <div class="world-lock-icon">🔒</div>
                     <div class="world-name">${world.name[lang] || world.name.en}</div>
-                    <div class="world-locked-message">${strings.campaign.completeWorld1}</div>
+                    <div class="world-locked-message">${unlockText}</div>
                 `;
             }
 
@@ -2325,20 +2339,63 @@ class Game {
         const level = getLevelById(levelId);
         if (!level) return;
 
-        // Check if this is the first level of a world (show intro)
+        // Check if this is the first level of a world (show world intro first)
         const worldLevels = getLevelsForWorld(level.world);
         const isFirstLevel = worldLevels.length > 0 && levelId === worldLevels[0].id;
 
         if (isFirstLevel) {
-            // Show world introduction first, then start level
+            // Show world introduction first, then level intro
             this.showWorldIntroduction(level.world, () => {
                 this.hideOverlay('world-intro');
-                this.actuallyStartCampaignLevel(levelId);
+                this.showLevelIntroduction(levelId);
             });
         } else {
-            // Not first level, start directly
-            this.actuallyStartCampaignLevel(levelId);
+            // Show level introduction
+            this.showLevelIntroduction(levelId);
         }
+    }
+
+    // Show level introduction modal
+    showLevelIntroduction(levelId) {
+        const level = getLevelById(levelId);
+        if (!level) return;
+
+        const lang = getCurrentLanguage();
+        const strings = getStrings();
+
+        // Populate level intro modal
+        this.levelIntroNumber.textContent = `${strings.campaign.level} ${level.id}`;
+        this.levelIntroName.textContent = level.name[lang] || level.name.en;
+        this.levelIntroGoal.textContent = level.goal.description[lang] || level.goal.description.en;
+
+        // Show modifiers if any
+        if (level.modifiers && level.modifiers.length > 0) {
+            const modifierTexts = level.modifiers.map(mod => {
+                if (mod.type === 'time_limit') {
+                    const minutes = Math.floor(mod.seconds / 60);
+                    const seconds = mod.seconds % 60;
+                    const timeStr = seconds > 0 ? `${minutes}:${String(seconds).padStart(2, '0')}` : `${minutes} min`;
+                    return `⏱️ ${timeStr}`;
+                } else if (mod.type === 'move_limit') {
+                    return `📊 ${mod.moves} ${strings.campaign.moves}`;
+                } else if (mod.type === 'small_board') {
+                    return `📐 ${mod.size}x${mod.size}`;
+                } else if (mod.type === 'blocked_cells') {
+                    return `🚫 ${strings.daily.modifier.blocked_cells}`;
+                } else if (mod.type === 'single_cell_movement') {
+                    return `🐢 ${strings.daily.modifier.single_cell_movement}`;
+                }
+                return '';
+            }).filter(Boolean);
+            this.levelIntroModifiers.textContent = modifierTexts.join(' • ');
+        } else {
+            this.levelIntroModifiers.textContent = '';
+        }
+
+        // Store the pending level ID for the start button
+        this.pendingLevelId = levelId;
+
+        this.showOverlay('level-intro');
     }
 
     // Actually start a campaign level (renamed from startCampaignLevel)
@@ -2605,6 +2662,10 @@ class Game {
             modifier: getLevelModifierType(level)
         });
         Tracking.levelComplete(level.id, level.world);
+
+        // Update achievement text (goal description)
+        const goalDescription = level.goal.description[lang] || level.goal.description.en;
+        this.levelCompleteAchievement.textContent = goalDescription;
 
         // Update score display
         this.levelCompleteScoreValue.textContent = formatNumber(this.score);
@@ -2933,6 +2994,15 @@ class Game {
             if (this.worldIntroCallback) {
                 this.worldIntroCallback();
                 this.worldIntroCallback = null; // Clear callback
+            }
+        });
+
+        // Level intro start button
+        document.getElementById('level-intro-start-button').addEventListener('click', () => {
+            this.hideOverlay('level-intro');
+            if (this.pendingLevelId) {
+                this.actuallyStartCampaignLevel(this.pendingLevelId);
+                this.pendingLevelId = null;
             }
         });
 

@@ -130,14 +130,14 @@ describe('strings.js - localization tests', () => {
       setLanguage('en');
       const strings = getStrings();
       expect(strings.home.title).toBe('Powers of Pig');
-      expect(strings.home.play).toBe('Play');
+      expect(strings.home.play).toBe('Campaign');
     });
 
     it('returns French strings when language is fr', () => {
       setLanguage('fr');
       const strings = getStrings();
       expect(strings.home.title).toBe('Gruik');
-      expect(strings.home.play).toBe('Jouer');
+      expect(strings.home.play).toBe('Campagne');
     });
 
     it('returns correct pig names for each language', () => {
@@ -310,6 +310,14 @@ describe('strings.js - localization tests', () => {
     it('campaign section exists in both languages', () => {
       expect(STRINGS.en.campaign).toBeDefined();
       expect(STRINGS.fr.campaign).toBeDefined();
+    });
+
+    it('campaign has world unlock strings for both languages', () => {
+      // Bug fix: World 3 was showing "Complete World 1" instead of "Complete World 2"
+      expect(STRINGS.en.campaign.completeWorld1).toBe('Complete World 1 to unlock');
+      expect(STRINGS.en.campaign.completeWorld2).toBe('Complete World 2 to unlock');
+      expect(STRINGS.fr.campaign.completeWorld1).toBe('Complète Le Monde 1 pour déverrouiller');
+      expect(STRINGS.fr.campaign.completeWorld2).toBe('Complète Le Monde 2 pour déverrouiller');
     });
 
     it('collection.progress is a function in both languages', () => {

@@ -30,13 +30,12 @@
         <div class="home-pig">🐷</div>
         <button class="btn btn-primary" id="campaign-button" data-i18n="home.play">Play</button>
         <button class="btn btn-secondary btn-daily" id="daily-button">
-            <span data-i18n="daily.button">Daily</span>
+            <span data-i18n="daily.button">Daily Challenge</span>
             <span class="streak-badge" id="home-streak-badge"></span>
         </button>
+        <button class="btn btn-tertiary" id="collection-button" data-i18n="home.collection">Collection</button>
         <div class="home-secondary-links">
             <a class="subtle-link" id="endless-button" data-i18n="campaign.classicMode">Classic Mode</a>
-            <span class="link-separator">•</span>
-            <a class="subtle-link" id="collection-button" data-i18n="home.collection">Collection</a>
         </div>
     </div>
 
@@ -58,7 +57,6 @@
 
     <!-- LEVEL SELECT SCREEN -->
     <div class="screen level-select-screen" id="level-select-screen">
-        <button class="lang-toggle" aria-label="Toggle language">EN</button>
         <header class="level-select-header">
             <button class="icon-btn" id="level-back-button">←</button>
             <h2 id="level-select-world-name">The Farm</h2>
@@ -155,6 +153,7 @@
         <div class="modal level-complete-modal">
             <div class="level-complete-checkmark">✓</div>
             <h2 data-i18n="campaign.complete">Complete!</h2>
+            <div class="level-complete-achievement" id="level-complete-achievement"></div>
             <div class="level-complete-score">
                 <span data-i18n="game.score">Score:</span>
                 <span id="level-complete-score-value">0</span>
@@ -234,6 +233,19 @@
                 <p class="world-intro-description" id="world-intro-description">Learn the basics and discover your first pigs</p>
             </div>
             <button class="btn btn-primary btn-large" id="world-intro-start-button" data-i18n="campaign.letsGo">Let's Go!</button>
+        </div>
+    </div>
+
+    <!-- LEVEL INTRODUCTION OVERLAY -->
+    <div class="overlay" id="level-intro-overlay">
+        <div class="modal level-intro-modal">
+            <div class="level-intro-header">
+                <span class="level-intro-number" id="level-intro-number">Level 1</span>
+                <h2 class="level-intro-name" id="level-intro-name">First Steps</h2>
+            </div>
+            <div class="level-intro-goal" id="level-intro-goal">Reach Sprout</div>
+            <div class="level-intro-modifiers" id="level-intro-modifiers"></div>
+            <button class="btn btn-primary btn-large" id="level-intro-start-button" data-i18n="campaign.letsGo">Let's Go!</button>
         </div>
     </div>
 
