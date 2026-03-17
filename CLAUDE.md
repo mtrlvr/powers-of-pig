@@ -123,8 +123,14 @@ Defined in `levels.js`. Three worlds with 8 levels each.
 - `blocked_cells` — Specific cells inactive
 - `single_cell_movement` — Tiles move only 1 cell per swipe
 
+**Level Introduction:**
+- Level intro modal shows before gameplay starts
+- Displays: level number, level name, goal description, modifiers (if any)
+- Requires "Let's Go!" button click to start
+- For first level of a world, world intro shows first, then level intro
+
 **Level Completion:**
-- Level Complete overlay with score, emoji rating (4 options), pig unlock if applicable
+- Level Complete overlay with score, achievement text (goal description), emoji rating (4 options), pig unlock if applicable
 - Level Failed overlay ("SO CLOSE!") with progress message and contextual tips
 - Progress stored in localStorage under `pop_campaign`
 
@@ -140,7 +146,7 @@ Defined in `constants.js`. Each tier defined with: `{ tier, name, color, icon, i
 - Home, World Select, Level Select, Game, Game Over, Win, Collection
 
 **Overlays:**
-- Pause, Restart Confirmation, Feedback, Level Complete, Level Failed ("SO CLOSE!"), World Introduction, View Board
+- Pause, Restart Confirmation, Feedback, Level Introduction, Level Complete, Level Failed ("SO CLOSE!"), World Introduction, View Board
 
 ### Feedback System
 A two-question feedback modal appears on game over. Players can also trigger it via "Give Feedback" during play.

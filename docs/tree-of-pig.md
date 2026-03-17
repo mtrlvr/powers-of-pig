@@ -28,6 +28,8 @@ Features in Powers of Pig.
 - 📋 World 4: The Cosmos
 - ✅ Level goals
 - ✅ Level modifiers
+- ✅ Level intro modal
+- ✅ Achievement text on completion
 
 ## Collection
 
