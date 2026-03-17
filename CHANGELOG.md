@@ -6,13 +6,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-03-17
+
 ### Added
-- Writing style guide (`WRITING_STYLE.md`)
-- Documentation maintenance checklist
-- Tree of Pig feature roadmap
+- Level intro modal showing goal before gameplay starts
+- Achievement text in level complete modal
+- World 3: The City (8 levels, 17-24)
+- Test coverage for world unlock strings
 
 ### Changed
-- Archived campaign PRD to `docs/archive/`
+- Home screen buttons: "Play" → "Campaign", "Daily" → "Daily Challenge"
+- Collection link promoted to button
+- Goal text enlarged for better visibility
+- World unlock text now dynamic (World 3 shows "Complete World 2")
+
+### Fixed
+- Language toggle not working (null check for missing DOM element)
+- Duplicate language toggle on level select screen removed
+- World 3 showing "Complete World 1" instead of "Complete World 2"
 
 ## [1.2.0] - 2025-02-23
 
